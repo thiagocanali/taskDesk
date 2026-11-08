@@ -159,3 +159,15 @@ h1 { margin-bottom: 7px; font-size: 29px; font-weight: 800; letter-spacing: -1px
 .activity-type { color: #30394b; font-weight: 700; }
 .activity-item time { color: #8b95a5; }
 .activity-empty { margin: 8px 0 0; color: #8b95a5; }
+
+
+/* Priority and due-date visibility */
+.priority-urgent { background: #fde8ec; color: #b83f58; }
+.task-meta { align-items: center; flex-wrap: wrap; }
+.due-indicator { padding: 3px 7px; border-radius: 5px; font-size: 9px; font-weight: 700; }
+.due-overdue { background: #fff0ed; color: #bd5749; }
+.due-soon { background: #fff6e8; color: #a7772f; }
+.task-toolbar { justify-content: flex-end; align-items: end; }
+.filter-field { display: grid; gap: 6px; }
+.filter-select { min-width: 190px; }
+@media (max-width: 700px) { .task-toolbar { display: grid; grid-template-columns: 1fr; width: 100%; } .filter-field, .filter-select { width: 100%; } }

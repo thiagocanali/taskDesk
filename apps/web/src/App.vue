@@ -33,6 +33,7 @@ const saving = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 const statusFilter = ref<"ALL" | TaskStatus>("ALL");
+const priorityFilter = ref<"ALL" | TaskPriority>("ALL");
 const form = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
 const editingTaskId = ref<string | null>(null);
 const expandedTaskId = ref<string | null>(null);
@@ -52,11 +53,35 @@ const priorityLabels: Record<TaskPriority, string> = {
   URGENT: "Urgente",
 };
 
-const visibleTasks = computed(() =>
-  statusFilter.value === "ALL"
-    ? tasks.value
-    : tasks.value.filter((task) => task.status === statusFilter.value),
-);
+const visibleTasks = computed(() => tasks.value.filter((task) => {
+  const matchesStatus = statusFilter.value === "ALL" || task.status === statusFilter.value;
+  const matchesPriority = priorityFilter.value === "ALL" || task.priority === priorityFilter.value;
+  return matchesStatus && matchesPriority;
+}));
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return year + "-" + month + "-" + day;
+}
+
+function dueState(task: Task): "overdue" | "soon" | null {
+  if (!task.dueAt || task.status === "COMPLETED") return null;
+  const dueDate = task.dueAt.slice(0, 10);
+  const today = new Date();
+  if (dueDate < localDateKey(today)) return "overdue";
+  const nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+  return dueDate <= localDateKey(nextWeek) ? "soon" : null;
+}
+
+function dueStateLabel(task: Task) {
+  const state = dueState(task);
+  return state === "overdue" ? "Atrasada" : state === "soon" ? "Prazo próximo" : "";
+}
+
+const overdueCount = computed(() => tasks.value.filter((task) => dueState(task) === "overdue").length);
+const dueSoonCount = computed(() => tasks.value.filter((task) => dueState(task) === "soon").length);
 const activeCount = computed(() => tasks.value.filter((task) => task.status === "IN_PROGRESS").length);
 const waitingCount = computed(() => tasks.value.filter((task) => task.status === "WAITING").length);
 const completedCount = computed(() => tasks.value.filter((task) => task.status === "COMPLETED").length);
@@ -271,12 +296,14 @@ onMounted(loadTasks);
           <article class="summary-card"><span class="summary-label">Em andamento</span><strong>{{ String(activeCount).padStart(2, "0") }}</strong><span class="summary-foot">Trabalho ativo</span></article>
           <article class="summary-card"><span class="summary-label">Aguardando retorno</span><strong>{{ String(waitingCount).padStart(2, "0") }}</strong><span class="summary-foot">Dependem de terceiros</span></article>
           <article class="summary-card"><span class="summary-label">Concluídas</span><strong>{{ String(completedCount).padStart(2, "0") }}</strong><span class="summary-foot">Finalizadas</span></article>
+          <article class="summary-card"><span class="summary-label">Atrasadas</span><strong>{{ String(overdueCount).padStart(2, "0") }}</strong><span class="summary-foot">Prazo já passou</span></article>
+          <article class="summary-card"><span class="summary-label">Prazo próximo</span><strong>{{ String(dueSoonCount).padStart(2, "0") }}</strong><span class="summary-foot">Próximos 7 dias</span></article>
         </section>
 
         <section class="tasks-section" id="tasks">
           <div class="section-heading">
             <div><h2>Suas tarefas</h2><p>Crie e acompanhe suas próximas ações.</p></div>
-            <span class="task-count">{{ tasks.length }} registro(s)</span>
+            <span class="task-count">{{ visibleTasks.length }} de {{ tasks.length }} tarefa(s)</span>
           </div>
 
           <form class="task-form" @submit.prevent="createTask">
@@ -293,16 +320,22 @@ onMounted(loadTasks);
           </form>
 
           <div class="task-toolbar">
-            <label class="field-label" for="status-filter">Filtrar por status</label>
-            <select id="status-filter" v-model="statusFilter" class="filter-select">
-              <option value="ALL">Todas</option><option value="NEW">Novas</option><option value="IN_PROGRESS">Em andamento</option><option value="WAITING">Aguardando retorno</option><option value="COMPLETED">Concluídas</option>
-            </select>
+            <div class="filter-field"><label class="field-label" for="status-filter">Status</label>
+              <select id="status-filter" v-model="statusFilter" class="filter-select">
+                <option value="ALL">Todos os status</option><option value="NEW">Novas</option><option value="IN_PROGRESS">Em andamento</option><option value="WAITING">Aguardando retorno</option><option value="COMPLETED">Concluídas</option>
+              </select>
+            </div>
+            <div class="filter-field"><label class="field-label" for="priority-filter">Prioridade</label>
+              <select id="priority-filter" v-model="priorityFilter" class="filter-select">
+                <option value="ALL">Todas as prioridades</option><option value="LOW">Baixa</option><option value="NORMAL">Normal</option><option value="HIGH">Alta</option><option value="URGENT">Urgente</option>
+              </select>
+            </div>
           </div>
 
           <div v-if="loading" class="empty-state" role="status">Carregando tarefas...</div>
           <div v-else-if="visibleTasks.length === 0" class="empty-state">
             <strong>{{ tasks.length === 0 ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
-            <p>{{ tasks.length === 0 ? "Crie sua primeira tarefa no formulário acima." : "Escolha outro status para ver suas tarefas." }}</p>
+            <p>{{ tasks.length === 0 ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
           </div>
           <div v-else class="task-list">
             <article v-for="task in visibleTasks" :key="task.id" class="task-card">
@@ -324,7 +357,7 @@ onMounted(loadTasks);
                     <span class="priority" :class="`priority-${task.priority.toLowerCase()}`">{{ priorityLabels[task.priority] }}</span>
                   </div>
                   <p v-if="task.description">{{ task.description }}</p>
-                  <div class="task-meta"><span class="task-id">{{ shortId(task.id) }}</span><span class="meta-separator">·</span><span>Prazo: {{ formatDueDate(task.dueAt) }}</span></div>
+                  <div class="task-meta"><span class="task-id">{{ shortId(task.id) }}</span><span class="meta-separator">·</span><span>Prazo: {{ formatDueDate(task.dueAt) }}</span><span v-if="dueState(task)" class="due-indicator" :class="'due-' + dueState(task)">{{ dueStateLabel(task) }}</span></div>
                 </div>
                 <div class="task-actions">
                   <label class="status-control"><span class="sr-only">Status de {{ task.title }}</span>
