@@ -4,6 +4,8 @@ import { computed, onMounted, ref } from "vue";
 type TaskStatus = "NEW" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 
+interface TaskActivity { id: string; taskId: string; type: string; message: string; createdAt: string; }
+
 interface Task {
   id: string;
   title: string;
@@ -33,6 +35,8 @@ const successMessage = ref("");
 const statusFilter = ref<"ALL" | TaskStatus>("ALL");
 const form = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
 const editingTaskId = ref<string | null>(null);
+const expandedTaskId = ref<string | null>(null);
+const activities = ref<Record<string, TaskActivity[]>>({});
 const editForm = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -122,11 +126,35 @@ async function updateStatus(task: Task, status: TaskStatus) {
       body: JSON.stringify({ status }),
     });
     tasks.value = tasks.value.map((item) => item.id === task.id ? result.data : item);
+    delete activities.value[task.id];
     successMessage.value = "Status atualizado.";
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "Não foi possível atualizar o status.";
     await loadTasks();
   }
+}
+
+async function toggleActivities(task: Task) {
+  if (expandedTaskId.value === task.id) {
+    expandedTaskId.value = null;
+    return;
+  }
+  expandedTaskId.value = task.id;
+  if (activities.value[task.id]) return;
+  try {
+    const result = await request<{ data: TaskActivity[] }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}/activities`));
+    activities.value = { ...activities.value, [task.id]: result.data };
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "Não foi possível carregar o histórico.";
+  }
+}
+
+function formatActivityDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
+function activityTypeLabel(type: string) {
+  return type === "CREATED" ? "Criada" : type === "UPDATED" ? "Atualizada" : type;
 }
 
 function startEditing(task: Task) {
@@ -179,6 +207,10 @@ async function deleteTask(task: Task) {
   try {
     await request<void>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), { method: "DELETE" });
     tasks.value = tasks.value.filter((item) => item.id !== task.id);
+    const nextActivities = { ...activities.value };
+    delete nextActivities[task.id];
+    activities.value = nextActivities;
+    if (expandedTaskId.value === task.id) expandedTaskId.value = null;
     successMessage.value = "Tarefa excluída.";
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "Não foi possível excluir a tarefa.";
@@ -301,9 +333,20 @@ onMounted(loadTasks);
                     </select>
                   </label>
                   <button class="secondary-button" type="button" @click="startEditing(task)">Editar</button>
+                  <button class="secondary-button" type="button" @click="toggleActivities(task)">{{ expandedTaskId === task.id ? "Ocultar histórico" : "Histórico" }}</button>
                   <button class="danger-button" type="button" @click="deleteTask(task)">Excluir</button>
                 </div>
               </template>
+              <div v-if="expandedTaskId === task.id" class="activity-panel">
+                <strong>Histórico</strong>
+                <div v-if="activities[task.id]?.length" class="activity-list">
+                  <div v-for="activity in activities[task.id]" :key="activity.id" class="activity-item">
+                    <span class="activity-dot" aria-hidden="true"></span>
+                    <div><span class="activity-type">{{ activityTypeLabel(activity.type) }}</span><span>{{ activity.message }}</span><time :datetime="activity.createdAt">{{ formatActivityDate(activity.createdAt) }}</time></div>
+                  </div>
+                </div>
+                <p v-else class="activity-empty">Nenhuma atividade registrada.</p>
+              </div>
             </article>
           </div>
         </section>
