@@ -32,6 +32,8 @@ const errorMessage = ref("");
 const successMessage = ref("");
 const statusFilter = ref<"ALL" | TaskStatus>("ALL");
 const form = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
+const editingTaskId = ref<string | null>(null);
+const editForm = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
 
 const statusLabels: Record<TaskStatus, string> = {
   NEW: "Nova",
@@ -127,6 +129,62 @@ async function updateStatus(task: Task, status: TaskStatus) {
   }
 }
 
+function startEditing(task: Task) {
+  editingTaskId.value = task.id;
+  editForm.value = {
+    title: task.title,
+    description: task.description ?? "",
+    priority: task.priority,
+    dueAt: task.dueAt ? task.dueAt.slice(0, 10) : "",
+  };
+}
+
+function cancelEditing() {
+  editingTaskId.value = null;
+}
+
+async function saveTask(task: Task) {
+  if (!editForm.value.title.trim()) return;
+  saving.value = true;
+  errorMessage.value = "";
+  successMessage.value = "";
+  try {
+    const payload = {
+      title: editForm.value.title.trim(),
+      description: editForm.value.description.trim() || null,
+      priority: editForm.value.priority,
+      dueAt: editForm.value.dueAt
+        ? new Date(`${editForm.value.dueAt}T12:00:00`).toISOString()
+        : null,
+    };
+    const result = await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    tasks.value = tasks.value.map((item) => item.id === task.id ? result.data : item);
+    editingTaskId.value = null;
+    successMessage.value = "Tarefa atualizada.";
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "Não foi possível salvar a tarefa.";
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function deleteTask(task: Task) {
+  const confirmed = window.confirm(`Deseja excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`);
+  if (!confirmed) return;
+  errorMessage.value = "";
+  successMessage.value = "";
+  try {
+    await request<void>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), { method: "DELETE" });
+    tasks.value = tasks.value.filter((item) => item.id !== task.id);
+    successMessage.value = "Tarefa excluída.";
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "Não foi possível excluir a tarefa.";
+  }
+}
+
 function formatDueDate(value: string | null) {
   if (!value) return "Sem prazo";
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(value));
@@ -216,19 +274,36 @@ onMounted(loadTasks);
           </div>
           <div v-else class="task-list">
             <article v-for="task in visibleTasks" :key="task.id" class="task-card">
-              <div class="task-main">
-                <div class="task-title-row">
-                  <h3>{{ task.title }}</h3>
-                  <span class="priority" :class="`priority-${task.priority.toLowerCase()}`">{{ priorityLabels[task.priority] }}</span>
+              <form v-if="editingTaskId === task.id" class="edit-form" @submit.prevent="saveTask(task)">
+                <label class="field-label" :for="`edit-title-${task.id}`">Título *</label>
+                <input :id="`edit-title-${task.id}`" v-model="editForm.title" maxlength="160" required />
+                <label class="field-label" :for="`edit-description-${task.id}`">Descrição</label>
+                <textarea :id="`edit-description-${task.id}`" v-model="editForm.description" rows="2" maxlength="5000" />
+                <div class="form-row">
+                  <div class="form-field"><label class="field-label" :for="`edit-priority-${task.id}`">Prioridade</label><select :id="`edit-priority-${task.id}`" v-model="editForm.priority"><option value="LOW">Baixa</option><option value="NORMAL">Normal</option><option value="HIGH">Alta</option><option value="URGENT">Urgente</option></select></div>
+                  <div class="form-field"><label class="field-label" :for="`edit-due-${task.id}`">Prazo</label><input :id="`edit-due-${task.id}`" v-model="editForm.dueAt" type="date" /></div>
+                  <div class="edit-actions"><button class="primary-button" type="submit" :disabled="saving || !editForm.title.trim()">{{ saving ? "Salvando..." : "Salvar" }}</button><button class="secondary-button" type="button" @click="cancelEditing">Cancelar</button></div>
                 </div>
-                <p v-if="task.description">{{ task.description }}</p>
-                <div class="task-meta"><span class="task-id">{{ shortId(task.id) }}</span><span class="meta-separator">·</span><span>Prazo: {{ formatDueDate(task.dueAt) }}</span></div>
-              </div>
-              <label class="status-control"><span class="sr-only">Status de {{ task.title }}</span>
-                <select :value="task.status" class="task-status-select" @change="updateStatus(task, ($event.target as HTMLSelectElement).value as TaskStatus)">
-                  <option value="NEW">{{ statusLabels.NEW }}</option><option value="IN_PROGRESS">{{ statusLabels.IN_PROGRESS }}</option><option value="WAITING">{{ statusLabels.WAITING }}</option><option value="COMPLETED">{{ statusLabels.COMPLETED }}</option>
-                </select>
-              </label>
+              </form>
+              <template v-else>
+                <div class="task-main">
+                  <div class="task-title-row">
+                    <h3>{{ task.title }}</h3>
+                    <span class="priority" :class="`priority-${task.priority.toLowerCase()}`">{{ priorityLabels[task.priority] }}</span>
+                  </div>
+                  <p v-if="task.description">{{ task.description }}</p>
+                  <div class="task-meta"><span class="task-id">{{ shortId(task.id) }}</span><span class="meta-separator">·</span><span>Prazo: {{ formatDueDate(task.dueAt) }}</span></div>
+                </div>
+                <div class="task-actions">
+                  <label class="status-control"><span class="sr-only">Status de {{ task.title }}</span>
+                    <select :value="task.status" class="task-status-select" @change="updateStatus(task, ($event.target as HTMLSelectElement).value as TaskStatus)">
+                      <option value="NEW">{{ statusLabels.NEW }}</option><option value="IN_PROGRESS">{{ statusLabels.IN_PROGRESS }}</option><option value="WAITING">{{ statusLabels.WAITING }}</option><option value="COMPLETED">{{ statusLabels.COMPLETED }}</option>
+                    </select>
+                  </label>
+                  <button class="secondary-button" type="button" @click="startEditing(task)">Editar</button>
+                  <button class="danger-button" type="button" @click="deleteTask(task)">Excluir</button>
+                </div>
+              </template>
             </article>
           </div>
         </section>

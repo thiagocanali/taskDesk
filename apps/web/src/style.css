@@ -136,3 +136,17 @@ h1 { margin-bottom: 7px; font-size: 29px; font-weight: 800; letter-spacing: -1px
   .filter-select { width: 100%; }
   .task-status-select { width: 100%; }
 }
+
+.edit-form { display: grid; width: 100%; gap: 9px; }
+.edit-form input, .edit-form textarea, .edit-form select { width: 100%; min-height: 38px; padding: 9px 11px; border: 1px solid #e2e7ef; border-radius: 7px; background: #fff; color: #30394b; font: inherit; font-size: 12px; }
+.edit-form textarea { resize: vertical; }
+.edit-actions, .task-actions { display: flex; align-items: center; gap: 8px; }
+.task-actions { flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; }
+.secondary-button, .danger-button { min-height: 34px; padding: 0 11px; border: 1px solid #e1e6ef; border-radius: 7px; background: #fff; color: #657187; font-size: 11px; font-weight: 650; cursor: pointer; }
+.danger-button { border-color: #f0d9d5; color: #b65b50; }
+.secondary-button:hover { background: #f7f8fb; }
+.danger-button:hover { background: #fff5f3; }
+@media (max-width: 700px) {
+  .task-actions { width: 100%; justify-content: flex-start; }
+  .edit-actions { grid-column: 1 / -1; }
+}
