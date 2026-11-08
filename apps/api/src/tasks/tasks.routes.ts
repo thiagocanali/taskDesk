@@ -37,7 +37,18 @@ export function createTasksRouter(repository: TaskRepository): Router {
       return;
     }
 
-    response.status(201).json({ data: await repository.create(input.data) });
+    const task = await repository.create(input.data);
+    await repository.addActivity(task.id, "CREATED", "Tarefa criada.");
+    response.status(201).json({ data: task });
+  });
+
+  router.get("/:id/activities", async (request: Request, response: Response) => {
+    const id = getTaskId(request);
+    if (!(await repository.findById(id))) {
+      response.status(404).json({ error: "Tarefa não encontrada." });
+      return;
+    }
+    response.status(200).json({ data: await repository.listActivities(id) });
   });
 
   router.get("/:id", async (request: Request, response: Response) => {
@@ -60,12 +71,18 @@ export function createTasksRouter(repository: TaskRepository): Router {
       return;
     }
 
-    const task = await repository.update(getTaskId(request), input.data);
+    const taskId = getTaskId(request);
+    const before = await repository.findById(taskId);
+    const task = await repository.update(taskId, input.data);
     if (!task) {
       response.status(404).json({ error: "Tarefa não encontrada." });
       return;
     }
 
+    if (before) {
+      const changedFields = Object.keys(input.data);
+      await repository.addActivity(task.id, "UPDATED", `Campos alterados: ${changedFields.join(", ")}.`);
+    }
     response.status(200).json({ data: task });
   });
 

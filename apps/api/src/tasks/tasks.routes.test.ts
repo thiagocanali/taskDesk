@@ -1,13 +1,16 @@
 import { describe,expect,it } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
-import type { CreateTaskInput,ListTaskFilters,TaskRecord,TaskRepository,UpdateTaskInput } from "./task.types.js";
+import type { CreateTaskInput,ListTaskFilters,TaskActivityRecord,TaskRecord,TaskRepository,UpdateTaskInput } from "./task.types.js";
 class InMemoryTaskRepository implements TaskRepository {
  private tasks:TaskRecord[]=[];
+ private activities:TaskActivityRecord[]=[];
  private sequence=0;
  async list(filters:ListTaskFilters):Promise<TaskRecord[]> {
   return this.tasks.filter(task=>(!filters.status||task.status===filters.status)&&(!filters.priority||task.priority===filters.priority));
  }
+ async listActivities(taskId:string):Promise<TaskActivityRecord[]>{return this.activities.filter(activity=>activity.taskId===taskId);}
+ async addActivity(taskId:string,type:string,message:string):Promise<TaskActivityRecord>{const activity={id:`activity-${this.activities.length+1}`,taskId,type,message,createdAt:new Date()};this.activities.push(activity);return activity;}
  async findById(id:string):Promise<TaskRecord|null>{return this.tasks.find(task=>task.id===id)??null;}
  async create(input:CreateTaskInput):Promise<TaskRecord>{
   const now=new Date(); const task:TaskRecord={id:`task-${++this.sequence}`,title:input.title,description:input.description??null,status:"NEW",priority:input.priority??"NORMAL",dueAt:input.dueAt??null,origin:input.origin??null,isDemo:false,createdAt:now,updatedAt:now};
@@ -24,6 +27,8 @@ describe("task endpoints",()=>{
  it("creates a task with safe defaults",async()=>{
   const response=await request(app).post("/api/v1/tasks").send({title:"  Preparar relatório  "});
   expect(response.status).toBe(201);expect(response.body.data).toMatchObject({title:"Preparar relatório",status:"NEW",priority:"NORMAL",isDemo:false});
+  const activities=await request(app).get(`/api/v1/tasks/${response.body.data.id}/activities`);
+  expect(activities.status).toBe(200);expect(activities.body.data).toHaveLength(1);expect(activities.body.data[0]).toMatchObject({type:"CREATED"});
  });
  it("rejects invalid task data",async()=>{const response=await request(app).post("/api/v1/tasks").send({title:"   ",unexpected:true});expect(response.status).toBe(400);});
  it("lists tasks and supports filters",async()=>{const response=await request(app).get("/api/v1/tasks?status=NEW");expect(response.status).toBe(200);expect(response.body.data).toHaveLength(1);});
