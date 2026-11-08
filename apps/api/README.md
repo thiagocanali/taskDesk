@@ -1,7 +1,5 @@
-# API application
+# API
 
-Node.js + Express + TypeScript HTTP API.
+Express + TypeScript + Zod + Prisma. Task routes are mounted at `/api/v1/tasks`. Request bodies are strictly validated. Route tests use an in-memory repository and need no PostgreSQL. Production persistence uses PrismaTaskRepository.
 
-The first implementation milestone will add a health endpoint and configuration validation. Keep routes thin, validate input at boundaries, and put domain behavior in application/domain modules.
-
-Run commands from the repository root once the workspace scripts are established.
+Local database: configure root `.env`, run `docker compose up -d postgres`, `npm run db:generate`, then `npm run db:migrate`.

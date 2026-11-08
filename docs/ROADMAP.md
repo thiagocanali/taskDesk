@@ -1,63 +1,37 @@
 # Roadmap
 
-The roadmap is ordered by dependency. Each phase should be completed and validated before the next begins.
-
-## Phase 0 — Repository foundation
-
-- [x] Create public GitHub repository.
-- [x] Add project overview.
-- [x] Add contributor/agent instructions and product documentation.
-- [x] Establish npm workspace and application folders.
-- [x] Add type-checking and test scripts.
-- [ ] Add formatting and linting.
-- [x] Add minimal web app and API health endpoint.
-- [ ] Verify local dependency installation, development servers, and production builds.
-- [ ] Confirm GitHub Actions validation workflow completes successfully.
+## Phase 0 — Foundation
+- [x] Public repo, overview, agent instructions, product documentation.
+- [x] npm workspaces, Vue shell, Express health endpoint.
+- [x] CI workflow for type checks, tests, and builds.
+- [ ] Verify local setup and database startup.
 
 ## Phase 1 — Manual task MVP
+- [x] Define initial task/activity database models.
+- [x] Implement validated task CRUD API.
+- [x] Add route tests for create, list/filter, update, validation, missing records, and delete.
+- [x] Add local PostgreSQL Docker Compose service.
+- [ ] Generate and verify first Prisma migration against a running database.
+- [ ] Connect Vue dashboard to the API.
+- [ ] Add task forms, filters, status controls, and activity history.
+- [ ] Add browser interaction tests.
 
-- [ ] Define and migrate the initial task schema.
-- [ ] Implement task create, read, update, and delete behavior.
-- [ ] Implement task status and priority transitions.
-- [ ] Build dashboard, filters, task detail, and edit form.
-- [ ] Add activity history.
-- [ ] Add clearly labeled demo records.
-- [ ] Cover domain rules and API behavior with tests.
-
-## Phase 2 — Online deployment and account safety
-
-- [ ] Choose hosting and managed PostgreSQL options based on cost and operational needs.
+## Phase 2 — Online and secure
+- [ ] Choose hosting and managed PostgreSQL based on cost.
 - [ ] Configure HTTPS and environment variables.
-- [ ] Add authentication and per-user authorization.
-- [ ] Add backups, health monitoring, and basic operational documentation.
-- [ ] Verify production build and persistence.
+- [ ] Add authentication and per-user authorization before storing personal tasks online.
+- [ ] Add backups and monitoring.
 
-## Phase 3 — Email provider foundation
-
-- [ ] Create dedicated test mailboxes before any real account is connected.
-- [ ] Design provider adapter interfaces.
-- [ ] Implement Gmail OAuth with minimum scopes.
-- [ ] Implement Microsoft Graph OAuth with minimum scopes.
-- [ ] Synchronize only the metadata/content required for triage.
-- [ ] Add deduplication and retry handling.
-- [ ] Keep all task creation behind explicit human approval.
+## Phase 3 — Email providers
+- [ ] Create dedicated test mailboxes.
+- [ ] Add Gmail and Microsoft 365 OAuth with minimum scopes.
+- [ ] Synchronize only required metadata/content and deduplicate.
+- [ ] Keep task creation behind explicit human approval.
 
 ## Phase 4 — Assisted triage
+- [ ] Deterministic baseline rules, classification, explanations, confidence.
+- [ ] Review queue and approval/rejection.
+- [ ] Evaluate false positives/negatives before considering automation.
 
-- [ ] Establish deterministic baseline rules.
-- [ ] Classify messages as actionable, informational, inconclusive, or related.
-- [ ] Explain suggestions and show confidence.
-- [ ] Add a review queue and approval/rejection actions.
-- [ ] Evaluate false positives and false negatives using test data.
-- [ ] Consider high-confidence automation only after documented evaluation and explicit product decision.
-
-## Phase 5 — Hardening and expansion
-
-- [ ] Review privacy, retention, and deletion behavior.
-- [ ] Add auditability and operational alerts.
-- [ ] Improve accessibility and responsive behavior.
-- [ ] Evaluate additional providers or workflows only when justified.
-
-## Release discipline
-
-A phase is not complete because code exists. It is complete when its acceptance criteria, tests, documentation, and operational implications have been reviewed.
+## Phase 5 — Hardening
+- [ ] Retention/deletion review, auditability, operational alerts, accessibility.

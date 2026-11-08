@@ -1,0 +1,33 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+enum TaskStatus { NEW IN_PROGRESS WAITING COMPLETED }
+enum TaskPriority { LOW NORMAL HIGH URGENT }
+model Task {
+ id String @id @default(cuid())
+ title String @db.VarChar(160)
+ description String? @db.Text
+ status TaskStatus @default(NEW)
+ priority TaskPriority @default(NORMAL)
+ dueAt DateTime?
+ origin String? @db.VarChar(200)
+ isDemo Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ activities TaskActivity[]
+ @@index([status, priority])
+ @@index([dueAt])
+}
+model TaskActivity {
+ id String @id @default(cuid())
+ taskId String
+ type String @db.VarChar(40)
+ message String @db.VarChar(500)
+ createdAt DateTime @default(now())
+ task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+ @@index([taskId, createdAt])
+}

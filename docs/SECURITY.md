@@ -1,55 +1,19 @@
-# Security and Privacy Baseline
+# Security and Privacy
 
-Security is part of the product foundation. This document records requirements that must be revisited as the application evolves.
+## Current status
+- No real mailboxes connected.
+- Authentication and per-user authorization are not implemented.
+- API is for local development/tests only; do not expose it with personal data.
+- Use synthetic/demo data.
+- Never commit credentials, tokens, or database passwords.
+- Validate inputs with strict schemas and avoid logging task content.
+- Return generic errors; never expose stack traces or secrets.
 
-## Current MVP
+## Before online multi-user use
+- Add proven authentication and per-resource authorization.
+- Scope every database query to the authenticated user.
+- Use secure HttpOnly SameSite cookies if cookie sessions are selected.
+- Add CSRF protection where applicable and rate-limit sensitive endpoints.
 
-- Do not connect real mailboxes.
-- Do not request or store email passwords.
-- Do not commit API keys, database credentials, session secrets, or tokens.
-- Use synthetic/demo data only.
-- Validate all user-controlled input.
-- Avoid logging task descriptions or other potentially sensitive content by default.
-- Return generic errors to clients; keep diagnostic detail out of public responses.
-- Keep dependencies maintained and review new packages before adding them.
-
-## Authentication and authorization
-
-Before online multi-user use:
-- Implement a proven authentication flow rather than custom password cryptography.
-- Enforce authorization on every user-owned resource at the API.
-- Scope database reads and writes to the authenticated user.
-- Use secure, HttpOnly, SameSite cookies when cookie-based sessions are selected.
-- Add CSRF protection where applicable.
-- Rate-limit authentication and sensitive endpoints.
-
-## Future mailbox integrations
-
-- Use OAuth; never collect mailbox passwords.
-- Request the narrowest scopes required.
-- Encrypt refresh/access tokens at rest using managed secrets or a dedicated encryption key.
-- Never return tokens to the browser unless a provider's documented flow strictly requires it.
-- Redact tokens and message content from logs, traces, analytics, and error reports.
-- Provide a disconnect/revoke path.
-- Document retention, deletion, and synchronization behavior before launch.
-- Use test mailboxes before connecting personal or work accounts.
-
-## AI and untrusted content
-
-Email content, filenames, links, and attachments are untrusted data. They may contain malicious instructions or prompt injection attempts.
-
-- Treat message content as data, never as system/developer instructions.
-- Do not allow email text to authorize external actions.
-- AI output must be validated against a strict schema.
-- AI may suggest a task, but must not send or delete messages.
-- Keep human approval in the initial triage release.
-- Record enough provenance to explain why a suggestion was made without retaining unnecessary sensitive content.
-
-## Incident readiness
-
-Before production mailbox access, document:
-- How to revoke provider access and rotate credentials.
-- How to investigate suspicious access without exposing message content.
-- How to delete synchronized data.
-- Backup and recovery expectations.
-- User communication and incident response ownership.
+## Future email/AI
+Use OAuth and minimum scopes; encrypt tokens at rest; redact tokens and message content from logs; provide disconnect/revoke and data deletion. Treat email, links, filenames, and attachments as untrusted input and possible prompt injection. AI can suggest tasks but cannot send or delete messages. Human approval remains mandatory in the first triage release.
