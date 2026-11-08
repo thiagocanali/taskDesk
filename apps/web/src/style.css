@@ -19,7 +19,7 @@ button, input { font: inherit; }
   position: fixed; inset: 0 auto 0 0; z-index: 2; display: flex; flex-direction: column;
   width: 244px; padding: 30px 18px 20px; background: #fff; border-right: 1px solid #e9edf4;
 }
-.brand { display: flex; align-items: center; gap: 11px; padding: 0 10px; font: 800 22px inherit; letter-spacing: -1px; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 0 10px; font-size: 22px; font-weight: 800; letter-spacing: -1px; }
 .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; background: #5265dc; color: white; font-size: 22px; }
 .brand-light { color: #71809a; font-weight: 500; }
 .workspace-label { margin: 54px 10px 13px; color: #a0a9ba; font-size: 10px; font-weight: 700; letter-spacing: 1.1px; }

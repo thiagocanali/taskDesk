@@ -8,7 +8,8 @@ The roadmap is ordered by dependency. Each phase should be completed and validat
 - [x] Add project overview.
 - [x] Add contributor/agent instructions and product documentation.
 - [x] Establish npm workspace and application folders.
-- [x] Add formatting, linting, type-checking, and test scripts. (Type checking and tests are configured; linting remains pending.)
+- [x] Add type-checking and test scripts.
+- [ ] Add formatting and linting.
 - [x] Add minimal web app and API health endpoint.
 - [ ] Verify local dependency installation, development servers, and production builds.
 - [ ] Confirm GitHub Actions validation workflow completes successfully.
