@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed } from "vue";
-
 type TaskStatus = "new" | "in-progress" | "waiting" | "completed";
 
 interface DemoTask {
@@ -11,14 +9,6 @@ interface DemoTask {
   priority: "high" | "normal" | "low";
   dueLabel: string;
 }
-
-const todayLabel = computed(() =>
-  new Intl.DateTimeFormat("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  }).format(new Date()).toLocaleUpperCase("pt-BR"),
-);
 
 const demoTasks: DemoTask[] = [
   {
@@ -71,7 +61,7 @@ const priorityLabels = {
 
       <div class="workspace-label">ESPAÇO DE TRABALHO</div>
       <nav class="navigation">
-        <a class="nav-item active" href="#overview" aria-current="page">
+        <a class="nav-item active" href="#overview">
           <span class="nav-icon" aria-hidden="true">▦</span>
           Visão geral
         </a>
@@ -99,7 +89,7 @@ const priorityLabels = {
       <div class="content">
         <div class="page-heading">
           <div>
-            <p class="eyebrow">{{ todayLabel }}</p>
+            <p class="eyebrow">SEGUNDA-FEIRA, SEU TRABALHO EM FOCO</p>
             <h1>Visão geral</h1>
             <p class="subtitle">Acompanhe o que precisa da sua atenção.</p>
           </div>

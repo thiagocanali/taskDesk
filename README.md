@@ -2,11 +2,11 @@
 
 A personal task management platform designed to turn actionable messages into clear, trackable work — without turning every email into a ticket.
 
-> **Project status:** foundation / MVP. The current dashboard uses demonstration data. Real Gmail and Microsoft 365 connections are intentionally out of scope for this milestone.
+> **Project status:** foundation / MVP planning. Email integrations and AI-assisted triage are intentionally out of scope for the first milestone.
 
 ## Product direction
 
-taskDesk helps distinguish information from commitments. The first version focuses on manually managed tasks, a reliable workflow, and a clean foundation for future integrations.
+taskDesk helps a person distinguish between information and commitments. The first version focuses on manually managed tasks, a reliable workflow, and a clean foundation for future integrations.
 
 ### MVP principles
 
@@ -23,18 +23,23 @@ taskDesk helps distinguish information from commitments. The first version focus
 | --- | --- |
 | Web | Vue 3, Vite, TypeScript |
 | API | Node.js, Express, TypeScript |
-| Database | PostgreSQL, Prisma (next persistence milestone) |
+| Database | PostgreSQL, Prisma |
 | Tests | Vitest and API-level tests |
 | Styling | Plain CSS (no Tailwind) |
 
-## Workspace
+## Planned workspace
 
 ```text
 taskDesk/
 ├── AGENTS.md
 ├── README.md
 ├── .env.example
+├── .gitignore
 ├── docs/
+│   ├── PRODUCT.md
+│   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
+│   └── SECURITY.md
 ├── apps/
 │   ├── web/
 │   └── api/
@@ -42,42 +47,25 @@ taskDesk/
     └── shared/
 ```
 
-## Requirements
+The workspace will be introduced incrementally. Each milestone must remain understandable, testable, and documented.
 
-- Node.js 20.15 or newer (Node 20 LTS recommended).
-- npm 10 or newer.
+## Development principles
 
-## Run locally
+1. Work in small, reviewable changes.
+2. Keep business logic separate from transport and UI layers.
+3. Use English for code identifiers and Portuguese (Brazil) for the interface.
+4. Never commit credentials, access tokens, private email content, or production data.
+5. Validate inputs at system boundaries.
+6. Run available tests, linting, and builds before declaring a task complete.
+7. Document any validation that could not be run.
 
-From the repository root:
+## Getting started
 
-```bash
-npm install
-cp .env.example .env
-npm run dev
-```
+The application workspace is being established. Setup instructions will be added when the first runnable web and API applications land.
 
-The web application is available at http://localhost:5173 and the API at http://127.0.0.1:3000.
+## Roadmap
 
-Useful commands:
-
-```bash
-npm run dev:web
-npm run dev:api
-npm run typecheck
-npm run test
-npm run build
-```
-
-The current API exposes `GET /health` and `GET /api/v1`. Database persistence and task CRUD are planned next; no database or mailbox connection is required yet.
-
-## Documentation
-
-- [Agent and contributor instructions](AGENTS.md)
-- [Product definition](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Security baseline](docs/SECURITY.md)
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the planned milestones and [docs/PRODUCT.md](docs/PRODUCT.md) for MVP behavior.
 
 ## License
 

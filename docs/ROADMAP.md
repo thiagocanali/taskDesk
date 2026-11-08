@@ -6,11 +6,12 @@ The roadmap is ordered by dependency. Each phase should be completed and validat
 
 - [x] Create public GitHub repository.
 - [x] Add project overview.
-- [ ] Add contributor/agent instructions and product documentation.
-- [ ] Establish npm workspace and application folders.
-- [ ] Add formatting, linting, type-checking, and test scripts.
-- [ ] Add minimal web app and API health endpoint.
-- [ ] Verify local development and production builds.
+- [x] Add contributor/agent instructions and product documentation.
+- [x] Establish npm workspace and application folders.
+- [x] Add formatting, linting, type-checking, and test scripts. (Type checking and tests are configured; linting remains pending.)
+- [x] Add minimal web app and API health endpoint.
+- [ ] Verify local dependency installation, development servers, and production builds.
+- [ ] Confirm GitHub Actions validation workflow completes successfully.
 
 ## Phase 1 — Manual task MVP
 
