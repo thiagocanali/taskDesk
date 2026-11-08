@@ -3,16 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "description": "Personal task management platform",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "concurrently -n API,WEB -c blue,green \"npm run dev --workspace @taskdesk/api\" \"npm run dev --workspace @taskdesk/web\"",
     "dev:api": "npm run dev --workspace @taskdesk/api",
     "dev:web": "npm run dev --workspace @taskdesk/web",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
