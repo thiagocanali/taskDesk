@@ -1,19 +1,19 @@
 # taskDesk
 
-A personal task management platform for turning actionable messages into trackable work, without turning every email into a ticket.
+Plataforma pessoal de organização de tarefas a partir de mensagens acionáveis, sem transformar todo e-mail em chamado.
 
-**Current status:** task CRUD API and PostgreSQL foundation. The Vue dashboard still uses demo data. No real Gmail or Microsoft 365 connections exist.
+**Status atual:** API CRUD e dashboard Vue conectados. O painel lista, cria e atualiza tarefas pela API. Gmail e Microsoft 365 ainda não estão conectados.
 
 ## Stack
-- Web: Vue 3, Vite, TypeScript, plain CSS.
-- API: Node.js, Express, TypeScript, Zod.
-- Database: PostgreSQL 16, Prisma 6.
-- Tests: Vitest and Supertest.
+- Web: Vue 3, Vite, TypeScript e CSS puro.
+- API: Node.js, Express, TypeScript e Zod.
+- Banco: PostgreSQL 16 e Prisma 6.
+- Testes: Vitest e Supertest.
 
-## Requirements
-Node.js 20.15+, npm 10+, Docker Engine and Compose for local PostgreSQL.
+## Requisitos
+Node.js 20.15+, npm 10+ e Docker Engine com Docker Compose para PostgreSQL local.
 
-## Run locally
+## Executar localmente
 ```bash
 npm install
 cp .env.example .env
@@ -22,19 +22,30 @@ npm run db:generate
 npm run db:migrate
 npm run dev
 ```
-Web: http://localhost:5173. API: http://127.0.0.1:3000.
 
-Commands: `npm run typecheck`, `npm test`, `npm run build`, `npm run db:studio`.
+- Frontend: http://localhost:5173
+- API: http://127.0.0.1:3000
+- Health check: http://127.0.0.1:3000/health
 
-## Task API
-- `GET /api/v1/tasks` — list, optional status/priority filters.
-- `POST /api/v1/tasks` — create.
-- `GET /api/v1/tasks/:id` — details.
-- `PATCH /api/v1/tasks/:id` — update.
-- `DELETE /api/v1/tasks/:id` — explicit deletion.
+## Comandos
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run db:studio
+```
 
-Statuses: NEW, IN_PROGRESS, WAITING, COMPLETED. Priorities: LOW, NORMAL, HIGH, URGENT.
+## API de tarefas
+- `GET /api/v1/tasks` — listar, com filtros opcionais `status` e `priority`.
+- `POST /api/v1/tasks` — criar.
+- `GET /api/v1/tasks/:id` — consultar.
+- `PATCH /api/v1/tasks/:id` — atualizar.
+- `DELETE /api/v1/tasks/:id` — excluir explicitamente.
 
-Authentication is not implemented. Do not expose the API publicly with personal data until authentication and per-user authorization exist.
+Status: `NEW`, `IN_PROGRESS`, `WAITING`, `COMPLETED`.
+Prioridades: `LOW`, `NORMAL`, `HIGH`, `URGENT`.
 
-See [AGENTS.md](AGENTS.md), [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), and [roadmap](docs/ROADMAP.md).
+## Segurança e escopo
+A autenticação e autorização por usuário ainda não foram implementadas. Não exponha a API publicamente nem utilize dados pessoais reais até que esses controles estejam prontos. Integrações de e-mail permanecem desativadas; nenhuma mensagem é enviada ou excluída automaticamente.
+
+Consulte [AGENTS.md](AGENTS.md), [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.md) e [roadmap](docs/ROADMAP.md).

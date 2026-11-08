@@ -1,5 +1,22 @@
 # API
 
-Express + TypeScript + Zod + Prisma. Task routes are mounted at `/api/v1/tasks`. Request bodies are strictly validated. Route tests use an in-memory repository and need no PostgreSQL. Production persistence uses PrismaTaskRepository.
+Express + TypeScript + Zod + Prisma. As rotas de tarefas ficam em `/api/v1/tasks`. Os corpos das requisições são validados estritamente. Os testes das rotas usam repositório em memória e não exigem PostgreSQL.
 
-Local database: configure root `.env`, run `docker compose up -d postgres`, `npm run db:generate`, then `npm run db:migrate`.
+## Banco local
+
+1. Configure `.env` na raiz usando `.env.example`.
+2. Inicie o PostgreSQL: `docker compose up -d postgres`.
+3. Gere o Prisma Client: `npm run db:generate`.
+4. Aplique as migrações versionadas: `npm run db:migrate`.
+
+A migração inicial cria `Task`, `TaskActivity`, enums, índices e a chave estrangeira com exclusão em cascata para atividades da tarefa.
+
+## Rotas
+
+- `GET /api/v1/tasks`
+- `POST /api/v1/tasks`
+- `GET /api/v1/tasks/:id`
+- `PATCH /api/v1/tasks/:id`
+- `DELETE /api/v1/tasks/:id`
+
+Autenticação e autorização por usuário ainda não estão implementadas. Não exponha a API com dados pessoais.
