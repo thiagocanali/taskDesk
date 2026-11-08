@@ -10,6 +10,7 @@ Use a single repository with independently runnable web and API applications plu
 apps/
   web/       Vue 3 + Vite client
   api/       Express HTTP API
+    prisma/  PostgreSQL schema and migrations
 packages/
   shared/    Shared types and validation contracts
 docs/        Product, architecture, roadmap, and security docs
@@ -28,31 +29,26 @@ docs/        Product, architecture, roadmap, and security docs
 ### API
 
 - Expose versioned HTTP endpoints under `/api/v1`.
-- Validate request payloads.
+- Validate request payloads with Zod.
 - Apply application-level business rules.
+- Keep persistence behind repository interfaces.
 - Enforce authorization when authentication is added.
 - Return consistent error responses.
 - Expose a lightweight health endpoint that does not leak secrets.
 
-### Shared package
-
-- Hold stable shared types and schemas only when genuinely shared.
-- Avoid coupling the browser bundle to server-only code.
-- Never place secrets or environment-specific configuration here.
-
 ### Database
 
-- PostgreSQL is the planned persistent store.
-- Prisma will manage schema and migrations.
-- A task record should be user-owned when authentication is introduced.
-- Activity events should be append-oriented and should not store sensitive email bodies.
+- PostgreSQL is the persistent store.
+- Prisma manages the schema and migrations.
+- A task record must become user-owned before personal data is stored online.
+- Activity events are append-oriented and must not store sensitive email bodies.
 
 ## Initial domain model
 
 ### Task
 
 - `id`: generated identifier.
-- `title`: required short text.
+- `title`: required short text (maximum 160 characters).
 - `description`: optional text.
 - `status`: NEW, IN_PROGRESS, WAITING, COMPLETED.
 - `priority`: LOW, NORMAL, HIGH, URGENT.
@@ -67,17 +63,14 @@ docs/        Product, architecture, roadmap, and security docs
 - Activity types may include task creation, status change, priority change, and comment.
 - Keep activity content concise and avoid storing unnecessary sensitive data.
 
-The schema is a starting point, not a reason to implement every field before the basic workflow is working.
+## API
 
-## API direction
-
-Initial endpoints:
 - `GET /health` — process health.
 - `GET /api/v1/tasks` — list tasks with optional status/priority filters.
 - `POST /api/v1/tasks` — create a task.
 - `GET /api/v1/tasks/:id` — task detail.
 - `PATCH /api/v1/tasks/:id` — update task fields.
-- `DELETE /api/v1/tasks/:id` — delete only after explicit user action; consider soft-delete policy before implementation.
+- `DELETE /api/v1/tasks/:id` — explicit deletion.
 
 Use consistent response shapes and appropriate HTTP status codes. Do not expose database internals.
 

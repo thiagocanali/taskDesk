@@ -2,67 +2,71 @@
 
 A personal task management platform designed to turn actionable messages into clear, trackable work — without turning every email into a ticket.
 
-> **Project status:** manual-task API foundation. The web dashboard still contains demonstration data. Real Gmail and Microsoft 365 connections are intentionally out of scope.
+> **Project status:** foundation / MVP planning. Email integrations and AI-assisted triage are intentionally out of scope for the first milestone.
 
-## Stack
+## Product direction
 
-- Web: Vue 3, Vite, TypeScript, plain CSS.
-- API: Node.js, Express, TypeScript, Zod.
-- Database: PostgreSQL 16, Prisma 6.
-- Tests: Vitest and Supertest.
+taskDesk helps a person distinguish between information and commitments. The first version focuses on manually managed tasks, a reliable workflow, and a clean foundation for future integrations.
 
-## Requirements
+### MVP principles
 
-- Node.js 20.15 or newer.
-- npm 10 or newer.
-- Docker Engine and Docker Compose (for local PostgreSQL).
+- Manual task creation and management first.
+- Human control over task creation and status changes.
+- Demo data clearly identified as demo data.
+- No real Gmail or Microsoft 365 connections in the initial MVP.
+- No automatic email replies, deletion, or external side effects.
+- Security and privacy are architectural requirements, not a later add-on.
 
-## Run locally
+## Planned stack
 
-```bash
-npm install
-cp .env.example .env
-docker compose up -d postgres
-npm run db:generate
-npm run db:migrate
-npm run dev
+| Area | Technology |
+| --- | --- |
+| Web | Vue 3, Vite, TypeScript |
+| API | Node.js, Express, TypeScript |
+| Database | PostgreSQL, Prisma |
+| Tests | Vitest and API-level tests |
+| Styling | Plain CSS (no Tailwind) |
+
+## Planned workspace
+
+```text
+taskDesk/
+├── AGENTS.md
+├── README.md
+├── .env.example
+├── .gitignore
+├── docs/
+│   ├── PRODUCT.md
+│   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
+│   └── SECURITY.md
+├── apps/
+│   ├── web/
+│   └── api/
+└── packages/
+    └── shared/
 ```
 
-The web app is available at http://localhost:5173 and the API at http://127.0.0.1:3000.
+The workspace will be introduced incrementally. Each milestone must remain understandable, testable, and documented.
 
-Useful commands:
+## Development principles
 
-```bash
-npm run dev:web
-npm run dev:api
-npm run typecheck
-npm test
-npm run build
-npm run db:studio
-```
+1. Work in small, reviewable changes.
+2. Keep business logic separate from transport and UI layers.
+3. Use English for code identifiers and Portuguese (Brazil) for the interface.
+4. Never commit credentials, access tokens, private email content, or production data.
+5. Validate inputs at system boundaries.
+6. Run available tests, linting, and builds before declaring a task complete.
+7. Document any validation that could not be run.
 
-## API
+## Getting started
 
-All task endpoints are under `/api/v1/tasks`:
+The application workspace is being established. Setup instructions will be added when the first runnable web and API applications land.
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/v1/tasks` | List tasks; optional `status` and `priority` filters |
-| POST | `/api/v1/tasks` | Create a task |
-| GET | `/api/v1/tasks/:id` | Get task details |
-| PATCH | `/api/v1/tasks/:id` | Update task fields |
-| DELETE | `/api/v1/tasks/:id` | Delete a task after explicit user action |
+## Roadmap
 
-Allowed statuses: `NEW`, `IN_PROGRESS`, `WAITING`, `COMPLETED`.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the planned milestones and [docs/PRODUCT.md](docs/PRODUCT.md) for MVP behavior.
 
-Allowed priorities: `LOW`, `NORMAL`, `HIGH`, `URGENT`.
+## License
 
-The API validates request payloads and returns JSON errors. Authentication is not implemented yet; do not expose this API publicly with real user data until authentication and per-user authorization are added.
-
-## Documentation
-
-- [Agent instructions](AGENTS.md)
-- [Product definition](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Security baseline](docs/SECURITY.md)
+No license has been selected yet. Until one is added, all rights are reserved by the repository owner.

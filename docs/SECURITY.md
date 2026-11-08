@@ -2,13 +2,15 @@
 
 Security is part of the product foundation. This document records requirements that must be revisited as the application evolves.
 
-## Current MVP
+## Current MVP status
 
-- Do not connect real mailboxes.
+- Real mailboxes are not connected.
+- Authentication and per-user authorization are not implemented yet.
+- The task API is for local development and automated tests only. Do not expose it publicly with personal data.
+- Use synthetic/demo data only.
 - Do not request or store email passwords.
 - Do not commit API keys, database credentials, session secrets, or tokens.
-- Use synthetic/demo data only.
-- Validate all user-controlled input.
+- Validate all user-controlled input with strict schemas.
 - Avoid logging task descriptions or other potentially sensitive content by default.
 - Return generic errors to clients; keep diagnostic detail out of public responses.
 - Keep dependencies maintained and review new packages before adding them.

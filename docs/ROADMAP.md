@@ -1,39 +1,46 @@
 # Roadmap
 
+The roadmap is ordered by dependency. Each phase should be completed and validated before the next begins.
+
 ## Phase 0 — Repository foundation
 
-- [x] Public repository, project overview, agent instructions, and product documentation.
-- [x] npm workspaces, Vue dashboard shell, Express API health endpoint.
-- [x] GitHub Actions for type checks, tests, and builds.
-- [ ] Verify local dependency installation and database startup.
+- [x] Create public GitHub repository.
+- [x] Add project overview.
+- [x] Add contributor/agent instructions and product documentation.
+- [x] Establish npm workspace and application folders.
+- [x] Add type-checking and test scripts.
+- [ ] Add formatting and linting.
+- [x] Add minimal web app and API health endpoint.
+- [ ] Verify local dependency installation, development servers, and production builds.
+- [ ] Confirm GitHub Actions validation workflow completes successfully.
 
 ## Phase 1 — Manual task MVP
 
-- [x] Define the initial task and activity database models.
-- [x] Add validated task CRUD API endpoints.
-- [x] Add API tests for create, list/filter, update, validation, missing records, and delete.
-- [x] Add a local PostgreSQL Docker Compose service.
-- [ ] Create and verify the first Prisma migration against a running database.
-- [ ] Connect the Vue dashboard to the API.
-- [ ] Add create/edit forms, filters, and task status controls.
-- [ ] Add task activity history to the API and UI.
-- [ ] Add browser-level interaction tests.
+- [ ] Define and migrate the initial task schema.
+- [ ] Implement task create, read, update, and delete behavior.
+- [ ] Implement task status and priority transitions.
+- [ ] Build dashboard, filters, task detail, and edit form.
+- [ ] Add activity history.
+- [ ] Add clearly labeled demo records.
+- [ ] Cover domain rules and API behavior with tests.
 
 ## Phase 2 — Online deployment and account safety
 
-- [ ] Choose hosting and managed PostgreSQL options based on cost.
+- [ ] Choose hosting and managed PostgreSQL options based on cost and operational needs.
 - [ ] Configure HTTPS and environment variables.
-- [ ] Add authentication and per-user authorization before storing personal tasks online.
-- [ ] Add backups, health monitoring, and operational documentation.
+- [ ] Add authentication and per-user authorization.
+- [ ] Add backups, health monitoring, and basic operational documentation.
+- [ ] Verify production build and persistence.
 
 ## Phase 3 — Email provider foundation
 
 - [ ] Create dedicated test mailboxes before any real account is connected.
 - [ ] Design provider adapter interfaces.
-- [ ] Implement Gmail and Microsoft 365 OAuth with minimum scopes.
+- [ ] Implement Gmail OAuth with minimum scopes.
+- [ ] Implement Microsoft Graph OAuth with minimum scopes.
 - [ ] Synchronize only the metadata/content required for triage.
 - [ ] Add deduplication and retry handling.
-- [ ] Keep task creation behind explicit human approval.
+- [ ] Keep all task creation behind explicit human approval.
 
 ## Phase 4 — Assisted triage
 
@@ -41,12 +48,16 @@
 - [ ] Classify messages as actionable, informational, inconclusive, or related.
 - [ ] Explain suggestions and show confidence.
 - [ ] Add a review queue and approval/rejection actions.
-- [ ] Evaluate false positives and false negatives before considering automation.
+- [ ] Evaluate false positives and false negatives using test data.
+- [ ] Consider high-confidence automation only after documented evaluation and explicit product decision.
 
 ## Phase 5 — Hardening and expansion
 
 - [ ] Review privacy, retention, and deletion behavior.
 - [ ] Add auditability and operational alerts.
 - [ ] Improve accessibility and responsive behavior.
+- [ ] Evaluate additional providers or workflows only when justified.
 
-A phase is complete only when its acceptance criteria, tests, documentation, and operational implications have been reviewed.
+## Release discipline
+
+A phase is not complete because code exists. It is complete when its acceptance criteria, tests, documentation, and operational implications have been reviewed.
