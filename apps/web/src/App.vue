@@ -181,6 +181,7 @@ function formatActivityDate(value: string) {
 
 function activityTypeLabel(type: string) {
   if (type === "CREATED") return "Criada";
+  if (type === "UPDATED") return "Atualizada";
   if (type === "FIELD_UPDATED") return "Alteração";
   return type;
 }

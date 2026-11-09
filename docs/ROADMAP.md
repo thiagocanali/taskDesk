@@ -11,12 +11,12 @@
 - [x] Implement validated task CRUD API.
 - [x] Add route tests for create, list/filter, update, validation, missing records, and delete.
 - [x] Add local PostgreSQL Docker Compose service.
-- [ ] Generate and verify first Prisma migration against a running database (migration file is committed; live database verification remains).
+- [x] Apply the initial Prisma migration to an ephemeral PostgreSQL 16 database in CI.
 - [x] Connect Vue dashboard to the API.
 - [x] Add task forms, status and priority filters, status controls, and activity history.
 - [x] Record field-level history with previous and new status/priority values; ignore no-op updates.
 - [x] Add overdue and upcoming due-date indicators.
-- [x] Add browser-environment component interaction tests for combined filters, due-date indicators, and task creation.
+- [x] Add browser-environment component interaction tests for combined filters, due-date indicators, task creation, editing, status changes, history, and confirmed deletion.
 
 ## Phase 2 — Online and secure
 - [ ] Choose hosting and managed PostgreSQL based on cost.

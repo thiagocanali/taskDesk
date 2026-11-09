@@ -124,4 +124,102 @@ describe("task dashboard", () => {
     expect(wrapper.text()).toContain("Revisar relatório");
     expect(wrapper.text()).toContain("Tarefa criada com sucesso.");
   });
+
+  it("edits a task and sends normalized values", async () => {
+    const original = makeTask({ id: "task-edit", title: "Título antigo" });
+    const updated = makeTask({ id: "task-edit", title: "Título atualizado", priority: "URGENT" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [original] }))
+      .mockResolvedValueOnce(jsonResponse({ data: updated }));
+
+    const wrapper = await renderApp();
+    await wrapper.find(".task-card .secondary-button").trigger("click");
+    await wrapper.find("#edit-title-task-edit").setValue("  Título atualizado  ");
+    await wrapper.find("#edit-priority-task-edit").setValue("URGENT");
+    await wrapper.find("form.edit-form").trigger("submit");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/tasks/task-edit", expect.objectContaining({
+      method: "PATCH",
+      body: expect.stringContaining('"title":"Título atualizado"'),
+    }));
+    expect(wrapper.text()).toContain("Título atualizado");
+    expect(wrapper.text()).toContain("Tarefa atualizada.");
+    expect(wrapper.find("form.edit-form").exists()).toBe(false);
+  });
+
+  it("updates a task status and refreshes its visible state", async () => {
+    const original = makeTask({ id: "task-status", status: "NEW" });
+    const updated = makeTask({ id: "task-status", status: "IN_PROGRESS" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [original] }))
+      .mockResolvedValueOnce(jsonResponse({ data: updated }));
+
+    const wrapper = await renderApp();
+    await wrapper.find(".task-status-select").setValue("IN_PROGRESS");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/tasks/task-status", expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ status: "IN_PROGRESS" }),
+    }));
+    expect(wrapper.text()).toContain("Status atualizado.");
+  });
+
+  it("loads task history and labels legacy update events", async () => {
+    const task = makeTask({ id: "task-history" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [
+          { id: "activity-1", taskId: task.id, type: "CREATED", message: "Tarefa criada.", createdAt: "2026-11-08T10:00:00.000Z" },
+          { id: "activity-2", taskId: task.id, type: "UPDATED", message: "Tarefa atualizada.", createdAt: "2026-11-08T11:00:00.000Z" },
+          { id: "activity-3", taskId: task.id, type: "FIELD_UPDATED", message: "Prioridade: Normal → Alta", createdAt: "2026-11-08T12:00:00.000Z" },
+        ],
+      }));
+
+    const wrapper = await renderApp();
+    await wrapper.findAll("button").find((button) => button.text() === "Histórico")?.trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/tasks/task-history/activities", expect.anything());
+    expect(wrapper.text()).toContain("Criada");
+    expect(wrapper.text()).toContain("Atualizada");
+    expect(wrapper.text()).toContain("Alteração");
+    expect(wrapper.text()).toContain("Prioridade: Normal → Alta");
+  });
+
+  it("does not delete a task when confirmation is cancelled", async () => {
+    const task = makeTask({ id: "task-protected", title: "Manter tarefa" });
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [task] }));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const wrapper = await renderApp();
+    await wrapper.find(".danger-button").trigger("click");
+    await flushPromises();
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(wrapper.text()).toContain("Manter tarefa");
+    confirm.mockRestore();
+  });
+
+  it("deletes a task only after confirmation", async () => {
+    const task = makeTask({ id: "task-delete", title: "Excluir tarefa" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }))
+      .mockResolvedValueOnce(jsonResponse(null, 204));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const wrapper = await renderApp();
+    await wrapper.find(".danger-button").trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/tasks/task-delete", expect.objectContaining({
+      method: "DELETE",
+    }));
+    expect(wrapper.text()).not.toContain("Excluir tarefa");
+    expect(wrapper.text()).toContain("Tarefa excluída.");
+    confirm.mockRestore();
+  });
 });
