@@ -14,6 +14,7 @@
 - [ ] Generate and verify first Prisma migration against a running database (migration file is committed; live database verification remains).
 - [x] Connect Vue dashboard to the API.
 - [x] Add task forms, status and priority filters, status controls, and activity history.
+- [x] Record field-level history with previous and new status/priority values; ignore no-op updates.
 - [x] Add overdue and upcoming due-date indicators.
 - [ ] Add browser interaction tests.
 

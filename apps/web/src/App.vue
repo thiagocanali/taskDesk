@@ -152,6 +152,7 @@ async function updateStatus(task: Task, status: TaskStatus) {
     });
     tasks.value = tasks.value.map((item) => item.id === task.id ? result.data : item);
     delete activities.value[task.id];
+    if (expandedTaskId.value === task.id) expandedTaskId.value = null;
     successMessage.value = "Status atualizado.";
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "Não foi possível atualizar o status.";
@@ -179,7 +180,9 @@ function formatActivityDate(value: string) {
 }
 
 function activityTypeLabel(type: string) {
-  return type === "CREATED" ? "Criada" : type === "UPDATED" ? "Atualizada" : type;
+  if (type === "CREATED") return "Criada";
+  if (type === "FIELD_UPDATED") return "Alteração";
+  return type;
 }
 
 function startEditing(task: Task) {
@@ -215,6 +218,8 @@ async function saveTask(task: Task) {
       body: JSON.stringify(payload),
     });
     tasks.value = tasks.value.map((item) => item.id === task.id ? result.data : item);
+    delete activities.value[task.id];
+    if (expandedTaskId.value === task.id) expandedTaskId.value = null;
     editingTaskId.value = null;
     successMessage.value = "Tarefa atualizada.";
   } catch (error) {

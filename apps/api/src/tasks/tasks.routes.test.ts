@@ -32,7 +32,22 @@ describe("task endpoints",()=>{
  });
  it("rejects invalid task data",async()=>{const response=await request(app).post("/api/v1/tasks").send({title:"   ",unexpected:true});expect(response.status).toBe(400);});
  it("lists tasks and supports filters",async()=>{const response=await request(app).get("/api/v1/tasks?status=NEW");expect(response.status).toBe(200);expect(response.body.data).toHaveLength(1);});
- it("updates a task status",async()=>{const response=await request(app).patch("/api/v1/tasks/task-1").send({status:"IN_PROGRESS"});expect(response.status).toBe(200);expect(response.body.data.status).toBe("IN_PROGRESS");});
+ it("records the previous and new status in task history",async()=>{
+  const response=await request(app).patch("/api/v1/tasks/task-1").send({status:"IN_PROGRESS"});
+  expect(response.status).toBe(200);expect(response.body.data.status).toBe("IN_PROGRESS");
+  const activities=await request(app).get("/api/v1/tasks/task-1/activities");
+  expect(activities.body.data).toContainEqual(expect.objectContaining({type:"FIELD_UPDATED",message:"Status: Nova → Em andamento"}));
+ });
+ it("records priority changes and ignores fields that did not change",async()=>{
+  const response=await request(app).patch("/api/v1/tasks/task-1").send({priority:"HIGH"});
+  expect(response.status).toBe(200);
+  const activities=await request(app).get("/api/v1/tasks/task-1/activities");
+  expect(activities.body.data).toContainEqual(expect.objectContaining({type:"FIELD_UPDATED",message:"Prioridade: Normal → Alta"}));
+  const countBefore=activities.body.data.length;
+  await request(app).patch("/api/v1/tasks/task-1").send({priority:"HIGH"});
+  const afterNoop=await request(app).get("/api/v1/tasks/task-1/activities");
+  expect(afterNoop.body.data).toHaveLength(countBefore);
+ });
  it("returns 404 for an unknown task",async()=>{const response=await request(app).get("/api/v1/tasks/missing");expect(response.status).toBe(404);});
  it("deletes a task explicitly",async()=>{const response=await request(app).delete("/api/v1/tasks/task-1");expect(response.status).toBe(204);expect(await repository.findById("task-1")).toBeNull();});
 });
