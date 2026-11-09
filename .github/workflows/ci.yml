@@ -9,6 +9,20 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: taskdesk
+          POSTGRES_USER: taskdesk
+          POSTGRES_PASSWORD: taskdesk_local
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taskdesk -d taskdesk"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql://taskdesk:taskdesk_local@localhost:5432/taskdesk?schema=public
     steps:
@@ -19,6 +33,8 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: Generate Prisma Client
         run: npm run db:generate
+      - name: Apply database migrations
+        run: npm run db:deploy --workspace @taskdesk/api
       - name: Type check
         run: npm run typecheck
       - name: Run tests
