@@ -52,7 +52,7 @@ async function renderApp() {
 
 describe("task dashboard", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-08T12:00:00.000Z"));
     fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [] }));
     vi.stubGlobal("fetch", fetchMock);
