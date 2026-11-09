@@ -16,7 +16,7 @@
 - [x] Add task forms, status and priority filters, status controls, and activity history.
 - [x] Record field-level history with previous and new status/priority values; ignore no-op updates.
 - [x] Add overdue and upcoming due-date indicators.
-- [ ] Add browser interaction tests.
+- [x] Add browser-environment component interaction tests for combined filters, due-date indicators, and task creation.
 
 ## Phase 2 — Online and secure
 - [ ] Choose hosting and managed PostgreSQL based on cost.
