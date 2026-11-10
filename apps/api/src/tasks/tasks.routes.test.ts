@@ -50,4 +50,26 @@ describe("task endpoints",()=>{
  });
  it("returns 404 for an unknown task",async()=>{const response=await request(app).get("/api/v1/tasks/missing");expect(response.status).toBe(404);});
  it("deletes a task explicitly",async()=>{const response=await request(app).delete("/api/v1/tasks/task-1");expect(response.status).toBe(204);expect(await repository.findById("task-1")).toBeNull();});
+ it("rejects unsupported filters and empty or unknown update fields",async()=>{
+  const invalidFilter=await request(app).get("/api/v1/tasks?status=INVALID");
+  expect(invalidFilter.status).toBe(400);
+  const emptyUpdate=await request(app).patch("/api/v1/tasks/task-1").send({});
+  expect(emptyUpdate.status).toBe(400);
+  const unknownField=await request(app).patch("/api/v1/tasks/task-1").send({isAdmin:true});
+  expect(unknownField.status).toBe(400);
+ });
+ it("returns 404 for missing task updates, deletion, and activity history",async()=>{
+  const update=await request(app).patch("/api/v1/tasks/does-not-exist").send({status:"COMPLETED"});
+  const deletion=await request(app).delete("/api/v1/tasks/does-not-exist");
+  const history=await request(app).get("/api/v1/tasks/does-not-exist/activities");
+  expect(update.status).toBe(404);
+  expect(deletion.status).toBe(404);
+  expect(history.status).toBe(404);
+ });
+ it("rejects invalid dates and unexpected query parameters",async()=>{
+  const invalidDate=await request(app).post("/api/v1/tasks").send({title:"Tarefa com data inválida",dueAt:"not-a-date"});
+  const unexpectedQuery=await request(app).get("/api/v1/tasks?owner=someone");
+  expect(invalidDate.status).toBe(400);
+  expect(unexpectedQuery.status).toBe(400);
+ });
 });

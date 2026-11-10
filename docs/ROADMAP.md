@@ -9,7 +9,7 @@
 ## Phase 1 — Manual task MVP
 - [x] Define initial task/activity database models.
 - [x] Implement validated task CRUD API.
-- [x] Add route tests for create, list/filter, update, validation, missing records, and delete.
+- [x] Add route tests for create, list/filter, update, validation, missing records, and delete, including strict filters, invalid dates, empty updates, and missing activity history.
 - [x] Add local PostgreSQL Docker Compose service.
 - [x] Apply the initial Prisma migration to an ephemeral PostgreSQL 16 database in CI.
 - [x] Connect Vue dashboard to the API.
@@ -17,6 +17,7 @@
 - [x] Record field-level history with previous and new status/priority values; ignore no-op updates.
 - [x] Add overdue and upcoming due-date indicators.
 - [x] Add browser-environment component interaction tests for combined filters, due-date indicators, task creation, editing, status changes, history, and confirmed deletion.
+- [x] Add API error-handling and HTTP security-header regression tests.
 
 ## Phase 2 — Online and secure
 - [ ] Choose hosting and managed PostgreSQL based on cost.
