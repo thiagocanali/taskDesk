@@ -4,7 +4,8 @@
 
 Use Node 22 or newer. The Supabase SDK is pinned to 2.119.0 and requires Node 22+.
 The web application and API are served from the same Vercel project, rooted at
-apps/web. Its vercel.json builds the API before the Vite client and rewrites
+apps/web. Its vercel.json installs the complete locked workspace dependency graph
+(including build tooling), builds the API before the Vite client and rewrites
 /api/v1/* and /health to api/index.mjs. The function reuses one Express app and
 Prisma pool per warm instance. Include files outside the root directory in Vercel
 monorepo settings so the API workspace and generated Prisma client are packaged.

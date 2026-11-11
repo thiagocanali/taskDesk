@@ -2,7 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build --workspace @taskdesk/api && npm run build --workspace @taskdesk/web",
   "rewrites": [
-    { "source": "/api/v1/:path*", "destination": "/api/index" },
-    { "source": "/health", "destination": "/api/index" }
-  ]
+    {
+      "source": "/api/v1/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/index"
+    }
+  ],
+  "installCommand": "npm ci --prefix ../.. --include=dev --workspaces --include-workspace-root --no-audit --no-fund"
 }
