@@ -1,13 +1,13 @@
 import request from "supertest";
 import { createApp } from "../app.js";
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../database/prisma.js";
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaTaskRepository } from "./prisma-task.repository.js";
 
 // Use only a disposable database; migrations must be applied before this suite.
 describe.skipIf(!process.env.TEST_DATABASE_URL)("Prisma task persistence", () => {
- const prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
+ const prisma = createPrismaClient(process.env.TEST_DATABASE_URL ?? "postgresql://localhost/unused");
  const repository = new PrismaTaskRepository(prisma, randomUUID());
  const ids: string[] = [];
  const title = `integration-${randomUUID()}`;

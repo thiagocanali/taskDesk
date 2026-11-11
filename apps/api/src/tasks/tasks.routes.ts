@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Router, type Request, type Response } from "express";
 import type { TaskRepository } from "./task.types.js";
 
@@ -20,7 +21,7 @@ export function createTasksRouter(repository: TaskRepository): Router {
     if (!filters.success) {
       response.status(400).json({
         error: "Filtros inválidos.",
-        details: filters.error.flatten(),
+        details: z.flattenError(filters.error),
       });
       return;
     }
@@ -33,7 +34,7 @@ export function createTasksRouter(repository: TaskRepository): Router {
     if (!input.success) {
       response.status(400).json({
         error: "Dados da tarefa inválidos.",
-        details: input.error.flatten(),
+        details: z.flattenError(input.error),
       });
       return;
     }
@@ -66,7 +67,7 @@ export function createTasksRouter(repository: TaskRepository): Router {
     if (!input.success) {
       response.status(400).json({
         error: "Dados da tarefa inválidos.",
-        details: input.error.flatten(),
+        details: z.flattenError(input.error),
       });
       return;
     }

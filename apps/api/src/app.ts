@@ -1,5 +1,5 @@
 import express, { type ErrorRequestHandler } from "express";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "./database/prisma.js";
 import { createAuthenticator, AuthenticationUnavailable, type Authenticate } from "./auth/authentication.js";
 import { PrismaTaskRepository } from "./tasks/prisma-task.repository.js";
 import { createTasksRouter } from "./tasks/tasks.routes.js";
@@ -13,10 +13,10 @@ export interface AppOptions {
 
 export function createApp(options: AppOptions = {}) {
   const app = express();
-  const prisma = options.taskRepository || options.repositoryForUser ? null : new PrismaClient();
+  let prisma: ReturnType<typeof createPrismaClient> | undefined;
   const authenticate = options.authenticate ?? createAuthenticator();
   const repositoryForUser = options.repositoryForUser ?? ((userId: string) =>
-    options.taskRepository ?? new PrismaTaskRepository(prisma!, userId));
+    options.taskRepository ?? new PrismaTaskRepository(prisma ??= createPrismaClient(), userId));
 
   app.disable("x-powered-by");
   app.use((_request, response, next) => {

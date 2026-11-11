@@ -32,6 +32,8 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --no-audit --no-fund
+      - name: Audit high and critical runtime advisories
+        run: npm run audit:prod
       - name: Generate Prisma Client
         run: npm run db:generate
       - name: Apply database migrations
