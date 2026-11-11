@@ -63,6 +63,25 @@ describe("task dashboard", () => {
     vi.useRealTimers();
   });
 
+  it("does not present unavailable task data as an empty workspace and retries loading", async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error("API indisponível"))
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+
+    const wrapper = await renderApp();
+
+    expect(wrapper.text()).toContain("API indisponível");
+    expect(wrapper.find(".empty-state").exists()).toBe(false);
+    expect(wrapper.find(".offline-badge").exists()).toBe(true);
+
+    await wrapper.find(".feedback-error .text-button").trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain("Seu espaço ainda está vazio.");
+    expect(wrapper.find(".live-badge").exists()).toBe(true);
+  });
+
   it("combines status and priority filters", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
       data: [
@@ -148,6 +167,21 @@ describe("task dashboard", () => {
     expect(wrapper.find("form.edit-form").exists()).toBe(false);
   });
 
+  it("keeps the status update error visible after refreshing the task list", async () => {
+    const task = makeTask({ id: "task-status-error", status: "NEW" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }))
+      .mockResolvedValueOnce(jsonResponse({ error: "Falha ao atualizar status." }, 500))
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }));
+
+    const wrapper = await renderApp();
+    await wrapper.find(".task-status-select").setValue("IN_PROGRESS");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Falha ao atualizar status.");
+    expect(wrapper.find(".feedback-error .text-button").exists()).toBe(false);
+  });
+
   it("updates a task status and refreshes its visible state", async () => {
     const original = makeTask({ id: "task-status", status: "NEW" });
     const updated = makeTask({ id: "task-status", status: "IN_PROGRESS" });
@@ -187,6 +221,29 @@ describe("task dashboard", () => {
     expect(wrapper.text()).toContain("Atualizada");
     expect(wrapper.text()).toContain("Alteração");
     expect(wrapper.text()).toContain("Prioridade: Normal → Alta");
+  });
+
+  it("offers a retry when task history cannot be loaded", async () => {
+    const task = makeTask({ id: "task-history-retry" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }))
+      .mockRejectedValueOnce(new Error("Histórico indisponível"))
+      .mockResolvedValueOnce(jsonResponse({
+        data: [{ id: "activity-retry", taskId: task.id, type: "CREATED", message: "Tarefa criada.", createdAt: "2026-11-08T10:00:00.000Z" }],
+      }));
+
+    const wrapper = await renderApp();
+    await wrapper.findAll("button").find((button) => button.text() === "Histórico")?.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Histórico indisponível");
+    expect(wrapper.text()).not.toContain("Nenhuma atividade registrada.");
+
+    await wrapper.find(".activity-error .text-button").trigger("click");
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(wrapper.text()).toContain("Tarefa criada.");
   });
 
   it("does not delete a task when confirmation is cancelled", async () => {

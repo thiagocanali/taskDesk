@@ -32,6 +32,12 @@ const loading = ref(true);
 const saving = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
+const taskLoadFailed = ref(false);
+const retryLoadAvailable = ref(false);
+const apiConnected = ref<boolean | null>(null);
+const activeSection = ref<"overview" | "tasks">("overview");
+const activityLoadingTaskId = ref<string | null>(null);
+const activityErrorMessage = ref("");
 const statusFilter = ref<"ALL" | TaskStatus>("ALL");
 const priorityFilter = ref<"ALL" | TaskPriority>("ALL");
 const form = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
@@ -106,11 +112,18 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 async function loadTasks() {
   loading.value = true;
   errorMessage.value = "";
+  successMessage.value = "";
+  retryLoadAvailable.value = false;
   try {
     const result = await request<{ data: Task[] }>(taskUrl());
     tasks.value = result.data;
+    taskLoadFailed.value = false;
+    apiConnected.value = true;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : "Falha ao carregar tarefas.";
+    taskLoadFailed.value = true;
+    apiConnected.value = false;
+    retryLoadAvailable.value = true;
   } finally {
     loading.value = false;
   }
@@ -121,6 +134,7 @@ async function createTask() {
   saving.value = true;
   errorMessage.value = "";
   successMessage.value = "";
+  retryLoadAvailable.value = false;
   const payload: TaskPayload = {
     title: form.value.title.trim(),
     description: form.value.description.trim() || undefined,
@@ -145,6 +159,7 @@ async function createTask() {
 async function updateStatus(task: Task, status: TaskStatus) {
   errorMessage.value = "";
   successMessage.value = "";
+  retryLoadAvailable.value = false;
   try {
     const result = await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
       method: "PATCH",
@@ -155,8 +170,24 @@ async function updateStatus(task: Task, status: TaskStatus) {
     if (expandedTaskId.value === task.id) expandedTaskId.value = null;
     successMessage.value = "Status atualizado.";
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "Não foi possível atualizar o status.";
+    const message = error instanceof Error ? error.message : "Não foi possível atualizar o status.";
     await loadTasks();
+    errorMessage.value = message;
+    retryLoadAvailable.value = false;
+  }
+}
+
+async function loadActivities(task: Task) {
+  if (activities.value[task.id] || activityLoadingTaskId.value === task.id) return;
+  activityLoadingTaskId.value = task.id;
+  activityErrorMessage.value = "";
+  try {
+    const result = await request<{ data: TaskActivity[] }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}/activities`));
+    activities.value = { ...activities.value, [task.id]: result.data };
+  } catch (error) {
+    activityErrorMessage.value = error instanceof Error ? error.message : "Não foi possível carregar o histórico.";
+  } finally {
+    activityLoadingTaskId.value = null;
   }
 }
 
@@ -166,13 +197,8 @@ async function toggleActivities(task: Task) {
     return;
   }
   expandedTaskId.value = task.id;
-  if (activities.value[task.id]) return;
-  try {
-    const result = await request<{ data: TaskActivity[] }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}/activities`));
-    activities.value = { ...activities.value, [task.id]: result.data };
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "Não foi possível carregar o histórico.";
-  }
+  activityErrorMessage.value = "";
+  await loadActivities(task);
 }
 
 function formatActivityDate(value: string) {
@@ -205,6 +231,7 @@ async function saveTask(task: Task) {
   saving.value = true;
   errorMessage.value = "";
   successMessage.value = "";
+  retryLoadAvailable.value = false;
   try {
     const payload = {
       title: editForm.value.title.trim(),
@@ -235,6 +262,7 @@ async function deleteTask(task: Task) {
   if (!confirmed) return;
   errorMessage.value = "";
   successMessage.value = "";
+  retryLoadAvailable.value = false;
   try {
     await request<void>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), { method: "DELETE" });
     tasks.value = tasks.value.filter((item) => item.id !== task.id);
@@ -269,10 +297,10 @@ onMounted(loadTasks);
       </a>
       <div class="workspace-label">ESPAÇO DE TRABALHO</div>
       <nav class="navigation">
-        <a class="nav-item active" href="#overview"><span class="nav-icon" aria-hidden="true">▦</span>Visão geral</a>
-        <a class="nav-item" href="#tasks"><span class="nav-icon" aria-hidden="true">✓</span>Minhas tarefas</a>
+        <a class="nav-item" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'location' : undefined" @click="activeSection = 'overview'"><span class="nav-icon" aria-hidden="true">▦</span>Visão geral</a>
+        <a class="nav-item" :class="{ active: activeSection === 'tasks' }" href="#tasks" :aria-current="activeSection === 'tasks' ? 'location' : undefined" @click="activeSection = 'tasks'"><span class="nav-icon" aria-hidden="true">✓</span>Minhas tarefas</a>
       </nav>
-      <div class="sidebar-bottom"><span class="status-dot status-online"></span>API conectada quando disponível</div>
+      <div class="sidebar-bottom"><span class="status-dot" :class="apiConnected === false ? 'status-offline' : apiConnected === true ? 'status-online' : 'status-checking'"></span>{{ apiConnected === false ? "API indisponível" : apiConnected === true ? "API conectada" : "Verificando conexão" }}</div>
     </aside>
 
     <section class="main-panel" id="overview">
@@ -288,22 +316,22 @@ onMounted(loadTasks);
             <h1>Visão geral</h1>
             <p class="subtitle">Suas tarefas em um só lugar, sem transformar todo e-mail em pendência.</p>
           </div>
-          <span class="demo-badge live-badge"><span></span> Dados da API</span>
+          <span class="demo-badge" :class="apiConnected === false ? 'offline-badge' : apiConnected === true ? 'live-badge' : 'checking-badge'" role="status"><span></span>{{ apiConnected === false ? "API indisponível" : apiConnected === true ? "Dados da API" : "Verificando API" }}</span>
         </div>
 
         <div v-if="errorMessage" class="feedback feedback-error" role="alert">
           {{ errorMessage }}
-          <button class="text-button" type="button" @click="loadTasks">Tentar novamente</button>
+          <button v-if="retryLoadAvailable" class="text-button" type="button" @click="loadTasks">Tentar novamente</button>
         </div>
         <div v-if="successMessage" class="feedback feedback-success" role="status">{{ successMessage }}</div>
 
         <section class="summary-grid" aria-label="Resumo de tarefas">
-          <article class="summary-card"><span class="summary-label">Total de tarefas</span><strong>{{ String(tasks.length).padStart(2, "0") }}</strong><span class="summary-foot">Registros salvos na API</span></article>
-          <article class="summary-card"><span class="summary-label">Em andamento</span><strong>{{ String(activeCount).padStart(2, "0") }}</strong><span class="summary-foot">Trabalho ativo</span></article>
-          <article class="summary-card"><span class="summary-label">Aguardando retorno</span><strong>{{ String(waitingCount).padStart(2, "0") }}</strong><span class="summary-foot">Dependem de terceiros</span></article>
-          <article class="summary-card"><span class="summary-label">Concluídas</span><strong>{{ String(completedCount).padStart(2, "0") }}</strong><span class="summary-foot">Finalizadas</span></article>
-          <article class="summary-card"><span class="summary-label">Atrasadas</span><strong>{{ String(overdueCount).padStart(2, "0") }}</strong><span class="summary-foot">Prazo já passou</span></article>
-          <article class="summary-card"><span class="summary-label">Prazo próximo</span><strong>{{ String(dueSoonCount).padStart(2, "0") }}</strong><span class="summary-foot">Próximos 7 dias</span></article>
+          <article class="summary-card"><span class="summary-label">Total de tarefas</span><strong>{{ apiConnected === false ? "—" : String(tasks.length).padStart(2, "0") }}</strong><span class="summary-foot">Registros salvos na API</span></article>
+          <article class="summary-card"><span class="summary-label">Em andamento</span><strong>{{ apiConnected === false ? "—" : String(activeCount).padStart(2, "0") }}</strong><span class="summary-foot">Trabalho ativo</span></article>
+          <article class="summary-card"><span class="summary-label">Aguardando retorno</span><strong>{{ apiConnected === false ? "—" : String(waitingCount).padStart(2, "0") }}</strong><span class="summary-foot">Dependem de terceiros</span></article>
+          <article class="summary-card"><span class="summary-label">Concluídas</span><strong>{{ apiConnected === false ? "—" : String(completedCount).padStart(2, "0") }}</strong><span class="summary-foot">Finalizadas</span></article>
+          <article class="summary-card"><span class="summary-label">Atrasadas</span><strong>{{ apiConnected === false ? "—" : String(overdueCount).padStart(2, "0") }}</strong><span class="summary-foot">Prazo já passou</span></article>
+          <article class="summary-card"><span class="summary-label">Prazo próximo</span><strong>{{ apiConnected === false ? "—" : String(dueSoonCount).padStart(2, "0") }}</strong><span class="summary-foot">Próximos 7 dias</span></article>
         </section>
 
         <section class="tasks-section" id="tasks">
@@ -339,7 +367,7 @@ onMounted(loadTasks);
           </div>
 
           <div v-if="loading" class="empty-state" role="status">Carregando tarefas...</div>
-          <div v-else-if="visibleTasks.length === 0" class="empty-state">
+          <div v-else-if="visibleTasks.length === 0 && !taskLoadFailed" class="empty-state">
             <strong>{{ tasks.length === 0 ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
             <p>{{ tasks.length === 0 ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
           </div>
@@ -376,23 +404,28 @@ onMounted(loadTasks);
                   <button class="danger-button" type="button" @click="deleteTask(task)">Excluir</button>
                 </div>
               </template>
-              <div v-if="expandedTaskId === task.id" class="activity-panel">
+              <div v-if="expandedTaskId === task.id" class="activity-panel" aria-live="polite">
                 <strong>Histórico</strong>
-                <div v-if="activities[task.id]?.length" class="activity-list">
+                <p v-if="activityLoadingTaskId === task.id" class="activity-empty">Carregando histórico...</p>
+                <div v-else-if="activityErrorMessage" class="activity-error" role="alert">
+                  <span>{{ activityErrorMessage }}</span>
+                  <button class="text-button" type="button" @click="loadActivities(task)">Tentar novamente</button>
+                </div>
+                <div v-else-if="activities[task.id]?.length" class="activity-list">
                   <div v-for="activity in activities[task.id]" :key="activity.id" class="activity-item">
                     <span class="activity-dot" aria-hidden="true"></span>
                     <div><span class="activity-type">{{ activityTypeLabel(activity.type) }}</span><span>{{ activity.message }}</span><time :datetime="activity.createdAt">{{ formatActivityDate(activity.createdAt) }}</time></div>
                   </div>
                 </div>
-                <p v-else class="activity-empty">Nenhuma atividade registrada.</p>
+                <p v-else-if="activities[task.id]" class="activity-empty">Nenhuma atividade registrada.</p>
               </div>
             </article>
           </div>
         </section>
 
-        <div class="next-step-note">
-          <span class="note-icon" aria-hidden="true">✦</span>
-          <div><strong>Seu espaço está conectado à API.</strong><p>As tarefas são persistidas no banco configurado no backend. Nenhuma caixa de e-mail está conectada nesta etapa.</p></div>
+        <div class="next-step-note" :class="{ 'connection-note-error': apiConnected === false }" role="status">
+          <span class="note-icon" aria-hidden="true">{{ apiConnected === false ? "!" : "✦" }}</span>
+          <div><strong>{{ apiConnected === false ? "A API não está disponível agora." : apiConnected === true ? "Seu espaço está conectado à API." : "Verificando conexão com a API." }}</strong><p>{{ apiConnected === false ? "Os dados não foram carregados. Verifique a conexão e tente novamente." : "As tarefas são persistidas no banco configurado no backend. Nenhuma caixa de e-mail está conectada nesta etapa." }}</p></div>
         </div>
       </div>
     </section>
