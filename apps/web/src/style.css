@@ -82,6 +82,7 @@ h1 { margin-bottom: 7px; font-size: 30px; line-height: 1.2; font-weight: 800; le
 .task-title-row h3 { margin: 0; font-size: 14px; line-height: 1.45; font-weight: 700; overflow-wrap: anywhere; }
 .task-main > p { margin: 7px 0 10px; color: #667289; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .priority { padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.demo-task-badge { padding: 4px 8px; border: 1px solid #e5d8f5; border-radius: 5px; background: #f7f2fc; color: #70518e; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .priority-high { background: #fff0ed; color: #a64f43; }
 .priority-normal { background: #edf2ff; color: #5265ae; }
 .priority-low { background: #edf7f2; color: #397b57; }
