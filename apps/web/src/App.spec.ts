@@ -71,7 +71,8 @@ describe("task dashboard", () => {
     const wrapper = await renderApp();
 
     expect(wrapper.text()).toContain("API indisponível");
-    expect(wrapper.find(".empty-state").exists()).toBe(false);
+    expect(wrapper.find(".empty-state").text()).toContain("Não foi possível carregar as tarefas.");
+    expect(wrapper.text()).not.toContain("Seu espaço ainda está vazio.");
     expect(wrapper.find(".offline-badge").exists()).toBe(true);
 
     await wrapper.find(".feedback-error .text-button").trigger("click");
