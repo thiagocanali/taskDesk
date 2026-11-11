@@ -49,3 +49,5 @@ Prioridades: `LOW`, `NORMAL`, `HIGH`, `URGENT`.
 A autenticação e autorização por usuário ainda não foram implementadas. Não exponha a API publicamente nem utilize dados pessoais reais até que esses controles estejam prontos. Integrações de e-mail permanecem desativadas; nenhuma mensagem é enviada ou excluída automaticamente.
 
 Consulte [AGENTS.md](AGENTS.md), [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.md) e [roadmap](docs/ROADMAP.md).
+
+A revisão técnica e as próximas prioridades estão em [engineering review](docs/ENGINEERING_REVIEW.md). Testes de persistência PostgreSQL são habilitados por `TEST_DATABASE_URL`, apenas em um banco descartável com as migrations aplicadas.

@@ -14,3 +14,5 @@ PostgreSQL is persistent storage; Prisma manages schema and migrations. Before o
 Route tests use an in-memory repository. CI generates Prisma Client, applies committed migrations to an ephemeral PostgreSQL 16 service, type-checks, runs tests, and builds both applications.
 
 Task history records each changed field independently. The web client also recognizes the legacy UPDATED event type for records created before field-level history was introduced. Status and priority entries include the previous and new human-readable values; descriptions and origins are recorded as change events without copying their contents into the audit message. No-op updates do not create activity entries.
+
+Task mutations own their history persistence. Creation uses a nested atomic write; updates read the prior task, persist fields and append history in one serializable Prisma transaction, retrying serialization conflicts up to three total attempts. HTTP routes never append audit events separately. PostgreSQL integration tests cover rollback and concurrent field updates when TEST_DATABASE_URL is configured.

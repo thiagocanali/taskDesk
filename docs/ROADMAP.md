@@ -19,6 +19,9 @@
 - [x] Add browser-environment component interaction tests for combined filters, due-date indicators, task creation, editing, status changes, history, and confirmed deletion.
 - [x] Add API error-handling and HTTP security-header regression tests.
 
+- [x] Persist task mutations and activity history atomically; test PostgreSQL rollback and concurrency.
+- [x] Use locked CI installs and validate persistence against the CI database.
+
 ## Phase 2 — Online and secure
 - [ ] Choose hosting and managed PostgreSQL based on cost.
 - [ ] Configure HTTPS and environment variables.
