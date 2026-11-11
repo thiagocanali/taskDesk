@@ -337,7 +337,7 @@ onMounted(loadTasks);
         <section class="tasks-section" id="tasks">
           <div class="section-heading">
             <div><h2>Suas tarefas</h2><p>Crie e acompanhe suas próximas ações.</p></div>
-            <span class="task-count">{{ visibleTasks.length }} de {{ tasks.length }} tarefa(s)</span>
+            <span class="task-count">{{ apiConnected === false ? "Dados indisponíveis" : `${visibleTasks.length} de ${tasks.length} tarefa(s)` }}</span>
           </div>
 
           <form class="task-form" @submit.prevent="createTask">
@@ -371,7 +371,7 @@ onMounted(loadTasks);
             <strong>{{ tasks.length === 0 ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
             <p>{{ tasks.length === 0 ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
           </div>
-          <div v-else class="task-list">
+          <div v-else-if="!taskLoadFailed" class="task-list">
             <article v-for="task in visibleTasks" :key="task.id" class="task-card">
               <form v-if="editingTaskId === task.id" class="edit-form" @submit.prevent="saveTask(task)">
                 <label class="field-label" :for="`edit-title-${task.id}`">Título *</label>
@@ -420,6 +420,10 @@ onMounted(loadTasks);
                 <p v-else-if="activities[task.id]" class="activity-empty">Nenhuma atividade registrada.</p>
               </div>
             </article>
+          </div>
+          <div v-else class="empty-state" role="status">
+            <strong>Não foi possível carregar as tarefas.</strong>
+            <p>Os dados anteriores não serão apresentados como se fossem atuais. Tente carregar novamente.</p>
           </div>
         </section>
 

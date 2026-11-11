@@ -182,6 +182,26 @@ describe("task dashboard", () => {
     expect(wrapper.find(".feedback-error .text-button").exists()).toBe(false);
   });
 
+  it("does not present stale tasks as current when a failed update is followed by a failed refresh", async () => {
+    const task = makeTask({ id: "task-stale", title: "Dados anteriores" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }))
+      .mockResolvedValueOnce(jsonResponse({ error: "Falha ao atualizar status." }, 500))
+      .mockRejectedValueOnce(new Error("API indisponível"));
+
+    const wrapper = await renderApp();
+    expect(wrapper.findAll(".task-card")).toHaveLength(1);
+
+    await wrapper.find(".task-status-select").setValue("IN_PROGRESS");
+    await flushPromises();
+
+    expect(wrapper.findAll(".task-card")).toHaveLength(0);
+    expect(wrapper.text()).not.toContain("Dados anteriores");
+    expect(wrapper.text()).toContain("Dados indisponíveis");
+    expect(wrapper.text()).toContain("Não foi possível carregar as tarefas.");
+    expect(wrapper.text()).toContain("API indisponível");
+  });
+
   it("updates a task status and refreshes its visible state", async () => {
     const original = makeTask({ id: "task-status", status: "NEW" });
     const updated = makeTask({ id: "task-status", status: "IN_PROGRESS" });
