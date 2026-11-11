@@ -15,6 +15,9 @@ export function createApp(options:AppOptions={}) {
  app.get("/api/v1",(_request:Request,response:Response)=>response.status(200).json({name:"taskDesk API",version:"v1",status:"available"}));
  app.use("/api/v1/tasks",createTasksRouter(repository));
  const errorHandler:ErrorRequestHandler=(error:unknown,_request,response,_next)=>{
+  if(typeof error === "object" && error !== null && "type" in error && error.type === "entity.too.large"){
+   response.status(413).json({error:"O corpo da requisição excede o limite permitido."});return;
+  }
   if(error instanceof SyntaxError && "body" in error){response.status(400).json({error:"O corpo da requisição contém JSON inválido."});return;}
   console.error("Unhandled API error");
   response.status(500).json({error:"Não foi possível concluir a operação."});
