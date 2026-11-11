@@ -8,7 +8,6 @@ function createRepository(overrides:Partial<TaskRepository>={}):TaskRepository {
   list:async()=>[],
   findById:async()=>null,
   listActivities:async()=>[],
-  addActivity:async()=>({id:"activity-1",taskId:"task-1",type:"CREATED",message:"Tarefa criada.",createdAt:new Date()}),
   create:async()=>{throw new Error("secret task content should not be logged");},
   update:async()=>null,
   delete:async()=>false,
@@ -37,6 +36,15 @@ describe("createApp",()=>{
   expect(response.body).toEqual({error:"Não foi possível concluir a operação."});
   expect(errorSpy).toHaveBeenCalledWith("Unhandled API error");
   expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining("secret task content"));
+ });
+
+ it("rejects oversized JSON as a client error without logging task data",async()=>{
+  const errorSpy=vi.spyOn(console,"error").mockImplementation(()=>undefined);
+  const response=await request(createApp({taskRepository:createRepository()}))
+   .post("/api/v1/tasks").send({title:"x".repeat(110000)});
+  expect(response.status).toBe(413);
+  expect(response.body).toEqual({error:"O corpo da requisição excede o limite permitido."});
+  expect(errorSpy).not.toHaveBeenCalled();
  });
 
  it("rejects malformed JSON with a safe client error",async()=>{

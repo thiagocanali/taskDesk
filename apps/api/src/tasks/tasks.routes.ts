@@ -1,48 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import type { TaskRecord, TaskRepository, TaskStatus, TaskPriority } from "./task.types.js";
+import type { TaskRepository } from "./task.types.js";
 
-const statusLabels: Record<TaskStatus, string> = {
-  NEW: "Nova",
-  IN_PROGRESS: "Em andamento",
-  WAITING: "Aguardando retorno",
-  COMPLETED: "Concluída",
-};
-
-const priorityLabels: Record<TaskPriority, string> = {
-  LOW: "Baixa",
-  NORMAL: "Normal",
-  HIGH: "Alta",
-  URGENT: "Urgente",
-};
-
-function activityMessage(field: keyof TaskRecord, before: TaskRecord, after: TaskRecord): string | null {
-  const previous = before[field];
-  const next = after[field];
-  if (previous instanceof Date || next instanceof Date) {
-    const previousTime = previous instanceof Date ? previous.getTime() : previous;
-    const nextTime = next instanceof Date ? next.getTime() : next;
-    if (previousTime === nextTime) return null;
-  } else if (previous === next) {
-    return null;
-  }
-
-  if (field === "status") {
-    return `Status: ${statusLabels[before.status]} → ${statusLabels[after.status]}`;
-  }
-  if (field === "priority") {
-    return `Prioridade: ${priorityLabels[before.priority]} → ${priorityLabels[after.priority]}`;
-  }
-  if (field === "title") {
-    return `Título alterado: “${before.title}” → “${after.title}”`;
-  }
-  if (field === "dueAt") {
-    const formatDate = (value: Date | null) => value ? value.toISOString().slice(0, 10) : "Sem prazo";
-    return `Prazo: ${formatDate(before.dueAt)} → ${formatDate(after.dueAt)}`;
-  }
-  if (field === "description") return "Descrição atualizada.";
-  if (field === "origin") return "Origem atualizada.";
-  return null;
-}
 import {
   createTaskSchema,
   taskFilterSchema,
@@ -81,7 +39,6 @@ export function createTasksRouter(repository: TaskRepository): Router {
     }
 
     const task = await repository.create(input.data);
-    await repository.addActivity(task.id, "CREATED", "Tarefa criada.");
     response.status(201).json({ data: task });
   });
 
@@ -115,20 +72,12 @@ export function createTasksRouter(repository: TaskRepository): Router {
     }
 
     const taskId = getTaskId(request);
-    const before = await repository.findById(taskId);
     const task = await repository.update(taskId, input.data);
     if (!task) {
       response.status(404).json({ error: "Tarefa não encontrada." });
       return;
     }
 
-    if (before) {
-      const changedFields = Object.keys(input.data) as (keyof TaskRecord)[];
-      for (const field of changedFields) {
-        const message = activityMessage(field, before, task);
-        if (message) await repository.addActivity(task.id, "FIELD_UPDATED", message);
-      }
-    }
     response.status(200).json({ data: task });
   });
 

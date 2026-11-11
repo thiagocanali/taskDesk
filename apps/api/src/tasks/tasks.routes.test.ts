@@ -1,3 +1,4 @@
+import { activityMessage } from "./task-activity.js";
 import { describe,expect,it } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
@@ -14,11 +15,12 @@ class InMemoryTaskRepository implements TaskRepository {
  async findById(id:string):Promise<TaskRecord|null>{return this.tasks.find(task=>task.id===id)??null;}
  async create(input:CreateTaskInput):Promise<TaskRecord>{
   const now=new Date(); const task:TaskRecord={id:`task-${++this.sequence}`,title:input.title,description:input.description??null,status:"NEW",priority:input.priority??"NORMAL",dueAt:input.dueAt??null,origin:input.origin??null,isDemo:false,createdAt:now,updatedAt:now};
-  this.tasks.push(task);return task;
+  this.tasks.push(task);await this.addActivity(task.id,"CREATED","Tarefa criada.");return task;
  }
  async update(id:string,input:UpdateTaskInput):Promise<TaskRecord|null>{
   const index=this.tasks.findIndex(task=>task.id===id);if(index<0)return null;
-  const updated={...this.tasks[index],...input,updatedAt:new Date()};this.tasks[index]=updated;return updated;
+  const updated={...this.tasks[index],...input,updatedAt:new Date()};for(const field of Object.keys(input) as (keyof UpdateTaskInput)[]){const message=activityMessage(field,this.tasks[index]!,updated as TaskRecord);if(message)await this.addActivity(id,"FIELD_UPDATED",message);}
+  this.tasks[index]=updated;return updated;
  }
  async delete(id:string):Promise<boolean>{const count=this.tasks.length;this.tasks=this.tasks.filter(task=>task.id!==id);return this.tasks.length<count;}
 }

@@ -14,8 +14,9 @@ export interface TaskRepository {
  list(filters:ListTaskFilters):Promise<TaskRecord[]>;
  findById(id:string):Promise<TaskRecord|null>;
  listActivities(taskId:string):Promise<TaskActivityRecord[]>;
- addActivity(taskId:string,type:string,message:string):Promise<TaskActivityRecord>;
+ /** Atomically persist the task and its creation activity. */
  create(input:CreateTaskInput):Promise<TaskRecord>;
+ /** Atomically persist changes and field history based on the latest stored task. */
  update(id:string,input:UpdateTaskInput):Promise<TaskRecord|null>;
  delete(id:string):Promise<boolean>;
 }

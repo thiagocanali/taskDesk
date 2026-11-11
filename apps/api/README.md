@@ -20,3 +20,7 @@ A migração inicial cria `Task`, `TaskActivity`, enums, índices e a chave estr
 - `DELETE /api/v1/tasks/:id`
 
 Autenticação e autorização por usuário ainda não estão implementadas. Não exponha a API com dados pessoais.
+
+## Testes de persistência
+
+Defina `TEST_DATABASE_URL` apenas para um PostgreSQL descartável e aplique as migrations nele antes de executar `npm test`. A suíte verifica atomicidade, rollback e concorrência; cria um trigger temporário de falha e nunca deve apontar para produção. Sem essa variável, os testes de integração são pulados.
