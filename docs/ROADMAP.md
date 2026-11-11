@@ -25,7 +25,10 @@
 ## Phase 2 — Online and secure
 - [ ] Choose hosting and managed PostgreSQL based on cost.
 - [ ] Configure HTTPS and environment variables.
-- [ ] Add authentication and per-user authorization before storing personal tasks online.
+- [x] Implement Supabase Auth login, verified Bearer tokens and per-user ownership on all task/history operations.
+- [x] Quarantine legacy ownerless tasks and deny direct Data API reads with RLS.
+- [x] Prepare same-origin Vercel Function routing for the API.
+- [ ] Activate a dedicated Supabase project, run migrations and validate hosted login with synthetic accounts.
 - [ ] Add backups and monitoring.
 
 ## Phase 3 — Email providers

@@ -2,7 +2,7 @@
 
 Plataforma pessoal de organização de tarefas a partir de mensagens acionáveis, sem transformar todo e-mail em chamado.
 
-**Status atual:** API CRUD e dashboard Vue conectados. O painel lista, cria e atualiza tarefas pela API. Gmail e Microsoft 365 ainda não estão conectados.
+**Status atual:** CRUD, histórico e isolamento por usuário implementados, com login por Supabase Auth. A ativação hospedada depende de um projeto Supabase dedicado e das variáveis de ambiente. Gmail e Microsoft 365 ainda não estão conectados.
 
 ## Stack
 - Web: Vue 3, Vite, TypeScript e CSS puro.
@@ -11,7 +11,7 @@ Plataforma pessoal de organização de tarefas a partir de mensagens acionáveis
 - Testes: Vitest e Supertest.
 
 ## Requisitos
-Node.js 20.15+, npm 10+ e Docker Engine com Docker Compose para PostgreSQL local.
+Node.js 22+, npm 10+ e Docker Engine com Docker Compose para PostgreSQL local.
 
 ## Executar localmente
 ```bash
@@ -46,7 +46,7 @@ Status: `NEW`, `IN_PROGRESS`, `WAITING`, `COMPLETED`.
 Prioridades: `LOW`, `NORMAL`, `HIGH`, `URGENT`.
 
 ## Segurança e escopo
-A autenticação e autorização por usuário ainda não foram implementadas. Não exponha a API publicamente nem utilize dados pessoais reais até que esses controles estejam prontos. Integrações de e-mail permanecem desativadas; nenhuma mensagem é enviada ou excluída automaticamente.
+O modo local usa uma identidade fixa e só funciona com `NODE_ENV=development`, `AUTH_MODE=local` e API em loopback. Nunca exponha esse modo na rede. Em produção, a API valida tokens com Supabase Auth e restringe tarefas e histórico ao usuário autenticado. A configuração de deploy está em [deployment](docs/DEPLOYMENT.md). Integrações de e-mail permanecem desativadas.
 
 Consulte [AGENTS.md](AGENTS.md), [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.md) e [roadmap](docs/ROADMAP.md).
 
