@@ -37,7 +37,7 @@ const retryLoadAvailable = ref(false);
 const apiConnected = ref<boolean | null>(null);
 const activeSection = ref<"overview" | "tasks">("overview");
 const activityLoadingTaskId = ref<string | null>(null);
-const activityErrorMessage = ref("");
+const activityErrors = ref<Record<string, string>>({});
 const statusFilter = ref<"ALL" | TaskStatus>("ALL");
 const priorityFilter = ref<"ALL" | TaskPriority>("ALL");
 const form = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
@@ -180,12 +180,17 @@ async function updateStatus(task: Task, status: TaskStatus) {
 async function loadActivities(task: Task) {
   if (activities.value[task.id] || activityLoadingTaskId.value === task.id) return;
   activityLoadingTaskId.value = task.id;
-  activityErrorMessage.value = "";
+  const nextErrors = { ...activityErrors.value };
+  delete nextErrors[task.id];
+  activityErrors.value = nextErrors;
   try {
     const result = await request<{ data: TaskActivity[] }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}/activities`));
     activities.value = { ...activities.value, [task.id]: result.data };
   } catch (error) {
-    activityErrorMessage.value = error instanceof Error ? error.message : "Não foi possível carregar o histórico.";
+    activityErrors.value = {
+      ...activityErrors.value,
+      [task.id]: error instanceof Error ? error.message : "Não foi possível carregar o histórico.",
+    };
   } finally {
     activityLoadingTaskId.value = null;
   }
@@ -197,7 +202,6 @@ async function toggleActivities(task: Task) {
     return;
   }
   expandedTaskId.value = task.id;
-  activityErrorMessage.value = "";
   await loadActivities(task);
 }
 
@@ -337,7 +341,7 @@ onMounted(loadTasks);
         <section class="tasks-section" id="tasks">
           <div class="section-heading">
             <div><h2>Suas tarefas</h2><p>Crie e acompanhe suas próximas ações.</p></div>
-            <span class="task-count">{{ visibleTasks.length }} de {{ tasks.length }} tarefa(s)</span>
+            <span class="task-count">{{ apiConnected === false ? "Dados indisponíveis" : `${visibleTasks.length} de ${tasks.length} tarefa(s)` }}</span>
           </div>
 
           <form class="task-form" @submit.prevent="createTask">
@@ -371,7 +375,7 @@ onMounted(loadTasks);
             <strong>{{ tasks.length === 0 ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
             <p>{{ tasks.length === 0 ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
           </div>
-          <div v-else class="task-list">
+          <div v-else-if="!taskLoadFailed" class="task-list">
             <article v-for="task in visibleTasks" :key="task.id" class="task-card">
               <form v-if="editingTaskId === task.id" class="edit-form" @submit.prevent="saveTask(task)">
                 <label class="field-label" :for="`edit-title-${task.id}`">Título *</label>
@@ -389,6 +393,7 @@ onMounted(loadTasks);
                   <div class="task-title-row">
                     <h3>{{ task.title }}</h3>
                     <span class="priority" :class="`priority-${task.priority.toLowerCase()}`">{{ priorityLabels[task.priority] }}</span>
+                    <span v-if="task.isDemo" class="demo-task-badge">Demonstração</span>
                   </div>
                   <p v-if="task.description">{{ task.description }}</p>
                   <div class="task-meta"><span class="task-id">{{ shortId(task.id) }}</span><span class="meta-separator">·</span><span>Prazo: {{ formatDueDate(task.dueAt) }}</span><span v-if="dueState(task)" class="due-indicator" :class="'due-' + dueState(task)">{{ dueStateLabel(task) }}</span></div>
@@ -407,8 +412,8 @@ onMounted(loadTasks);
               <div v-if="expandedTaskId === task.id" class="activity-panel" aria-live="polite">
                 <strong>Histórico</strong>
                 <p v-if="activityLoadingTaskId === task.id" class="activity-empty">Carregando histórico...</p>
-                <div v-else-if="activityErrorMessage" class="activity-error" role="alert">
-                  <span>{{ activityErrorMessage }}</span>
+                <div v-else-if="activityErrors[task.id]" class="activity-error" role="alert">
+                  <span>{{ activityErrors[task.id] }}</span>
                   <button class="text-button" type="button" @click="loadActivities(task)">Tentar novamente</button>
                 </div>
                 <div v-else-if="activities[task.id]?.length" class="activity-list">
@@ -420,6 +425,10 @@ onMounted(loadTasks);
                 <p v-else-if="activities[task.id]" class="activity-empty">Nenhuma atividade registrada.</p>
               </div>
             </article>
+          </div>
+          <div v-else class="empty-state" role="status">
+            <strong>Não foi possível carregar as tarefas.</strong>
+            <p>Os dados anteriores não serão apresentados como se fossem atuais. Tente carregar novamente.</p>
           </div>
         </section>
 

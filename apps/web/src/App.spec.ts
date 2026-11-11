@@ -71,7 +71,8 @@ describe("task dashboard", () => {
     const wrapper = await renderApp();
 
     expect(wrapper.text()).toContain("API indisponível");
-    expect(wrapper.find(".empty-state").exists()).toBe(false);
+    expect(wrapper.find(".empty-state").text()).toContain("Não foi possível carregar as tarefas.");
+    expect(wrapper.text()).not.toContain("Seu espaço ainda está vazio.");
     expect(wrapper.find(".offline-badge").exists()).toBe(true);
 
     await wrapper.find(".feedback-error .text-button").trigger("click");
@@ -100,6 +101,16 @@ describe("task dashboard", () => {
     expect(wrapper.text()).toContain("Alta em andamento");
     expect(wrapper.text()).not.toContain("Normal em andamento");
     expect(wrapper.text()).not.toContain("Alta concluída");
+  });
+
+  it("clearly identifies tasks marked as demonstration data", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      data: [makeTask({ id: "task-demo", title: "Tarefa demonstrativa", isDemo: true })],
+    }));
+
+    const wrapper = await renderApp();
+
+    expect(wrapper.find(".demo-task-badge").text()).toBe("Demonstração");
   });
 
   it("shows overdue and upcoming due dates but ignores completed tasks", async () => {
@@ -182,6 +193,26 @@ describe("task dashboard", () => {
     expect(wrapper.find(".feedback-error .text-button").exists()).toBe(false);
   });
 
+  it("does not present stale tasks as current when a failed update is followed by a failed refresh", async () => {
+    const task = makeTask({ id: "task-stale", title: "Dados anteriores" });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [task] }))
+      .mockResolvedValueOnce(jsonResponse({ error: "Falha ao atualizar status." }, 500))
+      .mockRejectedValueOnce(new Error("API indisponível"));
+
+    const wrapper = await renderApp();
+    expect(wrapper.findAll(".task-card")).toHaveLength(1);
+
+    await wrapper.find(".task-status-select").setValue("IN_PROGRESS");
+    await flushPromises();
+
+    expect(wrapper.findAll(".task-card")).toHaveLength(0);
+    expect(wrapper.text()).not.toContain("Dados anteriores");
+    expect(wrapper.text()).toContain("Dados indisponíveis");
+    expect(wrapper.text()).toContain("Não foi possível carregar as tarefas.");
+    expect(wrapper.text()).toContain("API indisponível");
+  });
+
   it("updates a task status and refreshes its visible state", async () => {
     const original = makeTask({ id: "task-status", status: "NEW" });
     const updated = makeTask({ id: "task-status", status: "IN_PROGRESS" });
@@ -221,6 +252,36 @@ describe("task dashboard", () => {
     expect(wrapper.text()).toContain("Atualizada");
     expect(wrapper.text()).toContain("Alteração");
     expect(wrapper.text()).toContain("Prioridade: Normal → Alta");
+  });
+
+  it("keeps history errors scoped to the task whose request failed", async () => {
+    const first = makeTask({ id: "task-history-first", title: "Primeira tarefa" });
+    const second = makeTask({ id: "task-history-second", title: "Segunda tarefa" });
+    let rejectFirstHistory!: (reason: Error) => void;
+    const firstHistory = new Promise<Response>((_resolve, reject) => {
+      rejectFirstHistory = reject;
+    });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ data: [first, second] }))
+      .mockImplementationOnce(() => firstHistory)
+      .mockResolvedValueOnce(jsonResponse({
+        data: [{ id: "activity-second", taskId: second.id, type: "CREATED", message: "Histórico da segunda tarefa.", createdAt: "2026-11-08T10:00:00.000Z" }],
+      }));
+
+    const wrapper = await renderApp();
+    const cards = wrapper.findAll(".task-card");
+    const firstHistoryButton = cards[0]!.findAll("button").find((button) => button.text() === "Histórico")!;
+    const secondHistoryButton = cards[1]!.findAll("button").find((button) => button.text() === "Histórico")!;
+
+    await firstHistoryButton.trigger("click");
+    await secondHistoryButton.trigger("click");
+    await flushPromises();
+    rejectFirstHistory(new Error("Falha no histórico da primeira tarefa."));
+    await flushPromises();
+
+    const secondCard = wrapper.findAll(".task-card")[1]!;
+    expect(secondCard.text()).toContain("Histórico da segunda tarefa.");
+    expect(secondCard.find(".activity-error").exists()).toBe(false);
   });
 
   it("offers a retry when task history cannot be loaded", async () => {
