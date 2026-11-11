@@ -1,3 +1,5 @@
+import request from "supertest";
+import { createApp } from "../app.js";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
@@ -6,7 +8,7 @@ import { PrismaTaskRepository } from "./prisma-task.repository.js";
 // Use only a disposable database; migrations must be applied before this suite.
 describe.skipIf(!process.env.TEST_DATABASE_URL)("Prisma task persistence", () => {
  const prisma = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
- const repository = new PrismaTaskRepository(prisma);
+ const repository = new PrismaTaskRepository(prisma, randomUUID());
  const ids: string[] = [];
  const title = `integration-${randomUUID()}`;
  afterAll(async () => {
@@ -56,4 +58,56 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Prisma task persistence", () =>
   expect(await repository.findById(task.id)).toMatchObject({status:"IN_PROGRESS", priority:"URGENT"});
   expect(await repository.listActivities(task.id)).toHaveLength(3);
  });
+ it("isolates every HTTP task operation between users and quarantines legacy rows", async () => {
+  const alice = randomUUID();
+  const bob = randomUUID();
+  const app = createApp({
+   authenticate: async req => {
+    const token = req.get("Authorization");
+    return token === "Bearer alice" ? {id:alice} : token === "Bearer bob" ? {id:bob} : null;
+   },
+   repositoryForUser: userId => new PrismaTaskRepository(prisma,userId),
+  });
+  const created=await request(app).post("/api/v1/tasks").set("Authorization","Bearer alice").send({title});
+  expect(created.status).toBe(201);
+  const id=created.body.data.id as string;
+  ids.push(id);
+  const legacy=await prisma.task.create({data:{title}});
+  ids.push(legacy.id);
+  expect((await request(app).get("/api/v1/tasks")).status).toBe(401);
+  for(const token of ["alice","bob"]){
+   const list=await request(app).get("/api/v1/tasks").set("Authorization",`Bearer ${token}`);
+   expect(list.body.data.map((task: {id:string})=>task.id)).toEqual(token==="alice"?[id]:[]);
+   expect((await request(app).get(`/api/v1/tasks/${legacy.id}`).set("Authorization",`Bearer ${token}`)).status).toBe(404);
+  }
+  for(const suffix of ["", "/activities"]){
+   expect((await request(app).get(`/api/v1/tasks/${id}${suffix}`).set("Authorization","Bearer bob")).status).toBe(404);
+  }
+  expect((await request(app).patch(`/api/v1/tasks/${id}`).set("Authorization","Bearer bob").send({status:"COMPLETED"})).status).toBe(404);
+  expect((await request(app).delete(`/api/v1/tasks/${id}`).set("Authorization","Bearer bob")).status).toBe(404);
+  expect((await request(app).patch(`/api/v1/tasks/${id}`).set("Authorization","Bearer alice").send({ownerId:bob})).status).toBe(400);
+  expect((await request(app).patch(`/api/v1/tasks/${id}`).set("Authorization","Bearer alice").send({status:"COMPLETED"})).status).toBe(200);
+  const history=await request(app).get(`/api/v1/tasks/${id}/activities`).set("Authorization","Bearer alice");
+  expect(history.body.data).toHaveLength(2);
+  expect((await request(app).delete(`/api/v1/tasks/${id}`).set("Authorization","Bearer alice")).status).toBe(204);
+ });
+ it("denies direct table reads to a non-privileged Data API style role",async()=>{
+  await create();
+  const role=`taskdesk_test_${randomUUID().replaceAll("-","")}`;
+  await prisma.$executeRawUnsafe(`CREATE ROLE "${role}" NOLOGIN`);
+  try {
+   await prisma.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO "${role}"`);
+   await prisma.$executeRawUnsafe(`GRANT SELECT ON "Task", "TaskActivity", "_prisma_migrations" TO "${role}"`);
+   await prisma.$transaction(async tx=>{
+    await tx.$executeRawUnsafe(`SET LOCAL ROLE "${role}"`);
+    expect(await tx.task.findMany()).toEqual([]);
+    expect(await tx.taskActivity.findMany()).toEqual([]);
+    expect(await tx.$queryRaw`SELECT * FROM "_prisma_migrations"`).toEqual([]);
+   });
+  } finally {
+   await prisma.$executeRawUnsafe(`DROP OWNED BY "${role}"`);
+   await prisma.$executeRawUnsafe(`DROP ROLE "${role}"`);
+  }
+ });
+
 });

@@ -25,7 +25,7 @@ class InMemoryTaskRepository implements TaskRepository {
  async delete(id:string):Promise<boolean>{const count=this.tasks.length;this.tasks=this.tasks.filter(task=>task.id!==id);return this.tasks.length<count;}
 }
 describe("task endpoints",()=>{
- const repository=new InMemoryTaskRepository();const app=createApp({taskRepository:repository});
+ const repository=new InMemoryTaskRepository();const app=createApp({authenticate:async()=>({id:"test-user"}),taskRepository:repository});
  it("creates a task with safe defaults",async()=>{
   const response=await request(app).post("/api/v1/tasks").send({title:"  Preparar relatório  "});
   expect(response.status).toBe(201);expect(response.body.data).toMatchObject({title:"Preparar relatório",status:"NEW",priority:"NORMAL",isDemo:false});
