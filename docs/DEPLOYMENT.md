@@ -2,12 +2,16 @@
 
 ## Runtime and boundaries
 
-Use Node 22 or newer. The Supabase SDK is pinned to 2.119.0 and requires Node 22+.
+Use Node 22.12 or newer. The Supabase SDK is pinned to 2.119.0 and requires Node 22+.
 The web application and API are served from the same Vercel project, rooted at
 apps/web. Its vercel.json installs the complete locked workspace dependency graph
 (including build tooling), builds the API before the Vite client and rewrites
 /api/v1/* and /health to api/index.mjs. The function reuses one Express app and
-Prisma pool per warm instance. Include files outside the root directory in Vercel
+Prisma pool per warm instance. Prisma 7 uses the PostgreSQL driver adapter with
+a maximum of five connections, a five-second connection timeout and a ten-second
+idle timeout. Prisma CLI reads DATABASE_URL from apps/api/prisma.config.ts; client
+generation does not require runtime secrets. Pool sizing is configured in the
+adapter, not through legacy connection_limit URL parameters. Include files outside the root directory in Vercel
 monorepo settings so the API workspace and generated Prisma client are packaged.
 Do not expose a second unauthenticated API deployment.
 

@@ -48,8 +48,9 @@ operator process. No mailbox data or OAuth tokens are stored. Logs and generic
 errors must not expose task contents, provider errors, credentials or tokens.
 JSON is limited to 100 KB and validated with strict schemas. Login rate limiting
 and password policies are provided by Supabase Auth; configure platform rate
-limits before wider public use. Dependency advisories from the initial review
-remain tracked separately and are not resolved by this authentication change.
+limits before wider public use. The production dependency audit is clean after the Zod/Prisma upgrades. Five
+moderate development-only package entries remain in the Vue test formatting
+chain; see DEPENDENCIES.md for scope and upgrade decisions.
 
 Before activation: use a dedicated project, configure HTTPS, restrict signups,
 verify two-user isolation, review Supabase advisors, and establish backups and

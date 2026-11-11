@@ -7,11 +7,11 @@ Plataforma pessoal de organização de tarefas a partir de mensagens acionáveis
 ## Stack
 - Web: Vue 3, Vite, TypeScript e CSS puro.
 - API: Node.js, Express, TypeScript e Zod.
-- Banco: PostgreSQL 16 e Prisma 6.
+- Banco: PostgreSQL 16 e Prisma 7.
 - Testes: Vitest e Supertest.
 
 ## Requisitos
-Node.js 22+, npm 10+ e Docker Engine com Docker Compose para PostgreSQL local.
+Node.js 22.12+, npm 10+ e Docker Engine com Docker Compose para PostgreSQL local.
 
 ## Executar localmente
 ```bash

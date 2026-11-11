@@ -43,4 +43,7 @@
 - [ ] Evaluate false positives/negatives before considering automation.
 
 ## Phase 5 — Hardening
+- [x] Upgrade production dependencies to resolve the initial Zod/Prisma advisories.
+- [x] Upgrade Vite/Vitest and Vue tooling to remove high/critical development advisories.
+- [ ] Track remaining moderate advisories in the Vue test formatting dependency chain.
 - [ ] Retention/deletion review, auditability, operational alerts, accessibility.
