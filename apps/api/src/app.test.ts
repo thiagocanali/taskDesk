@@ -19,7 +19,7 @@ describe("createApp",()=>{
  afterEach(()=>vi.restoreAllMocks());
 
  it("returns security headers and does not cache API responses",async()=>{
-  const response=await request(createApp({taskRepository:createRepository()})).get("/health");
+  const response=await request(createApp({authenticate:async()=>({id:"test-user"}),taskRepository:createRepository()})).get("/health");
   expect(response.status).toBe(200);
   expect(response.headers["x-content-type-options"]).toBe("nosniff");
   expect(response.headers["cache-control"]).toBe("no-store");
@@ -28,7 +28,7 @@ describe("createApp",()=>{
 
  it("returns a generic error without logging the underlying error message",async()=>{
   const errorSpy=vi.spyOn(console,"error").mockImplementation(()=>undefined);
-  const response=await request(createApp({taskRepository:createRepository()}))
+  const response=await request(createApp({authenticate:async()=>({id:"test-user"}),taskRepository:createRepository()}))
    .post("/api/v1/tasks")
    .send({title:"Tarefa válida"});
 
@@ -40,7 +40,7 @@ describe("createApp",()=>{
 
  it("rejects oversized JSON as a client error without logging task data",async()=>{
   const errorSpy=vi.spyOn(console,"error").mockImplementation(()=>undefined);
-  const response=await request(createApp({taskRepository:createRepository()}))
+  const response=await request(createApp({authenticate:async()=>({id:"test-user"}),taskRepository:createRepository()}))
    .post("/api/v1/tasks").send({title:"x".repeat(110000)});
   expect(response.status).toBe(413);
   expect(response.body).toEqual({error:"O corpo da requisição excede o limite permitido."});
@@ -48,7 +48,7 @@ describe("createApp",()=>{
  });
 
  it("rejects malformed JSON with a safe client error",async()=>{
-  const response=await request(createApp({taskRepository:createRepository()}))
+  const response=await request(createApp({authenticate:async()=>({id:"test-user"}),taskRepository:createRepository()}))
    .post("/api/v1/tasks")
    .set("Content-Type","application/json")
    .send('{"title":');

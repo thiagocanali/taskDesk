@@ -25,7 +25,7 @@ class InMemoryTaskRepository implements TaskRepository {
  async delete(id:string):Promise<boolean>{const count=this.tasks.length;this.tasks=this.tasks.filter(task=>task.id!==id);return this.tasks.length<count;}
 }
 describe("task endpoints",()=>{
- const repository=new InMemoryTaskRepository();const app=createApp({taskRepository:repository});
+ const repository=new InMemoryTaskRepository();const app=createApp({authenticate:async()=>({id:"test-user"}),taskRepository:repository});
  it("creates a task with safe defaults",async()=>{
   const response=await request(app).post("/api/v1/tasks").send({title:"  Preparar relatório  "});
   expect(response.status).toBe(201);expect(response.body.data).toMatchObject({title:"Preparar relatório",status:"NEW",priority:"NORMAL",isDemo:false});
@@ -73,5 +73,26 @@ describe("task endpoints",()=>{
   const unexpectedQuery=await request(app).get("/api/v1/tasks?owner=someone");
   expect(invalidDate.status).toBe(400);
   expect(unexpectedQuery.status).toBe(400);
+ });
+});
+
+describe("task validation contract",()=>{
+ it.each([
+  {title:"x".repeat(161)},
+  {title:"Valid",description:"x".repeat(5001)},
+  {title:"Valid",dueAt:"2026-02-30T12:00:00.000Z"},
+  {title:"Valid",ownerId:"11111111-1111-4111-8111-111111111111"},
+  {title:42},
+ ])("rejects invalid boundary input without changing the error response contract",async payload=>{
+  const app=createApp({authenticate:async()=>({id:"test-user"}),taskRepository:new InMemoryTaskRepository()});
+  const response=await request(app).post("/api/v1/tasks").send(payload);
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({error:"Dados da tarefa inválidos.",details:{formErrors:expect.any(Array),fieldErrors:expect.any(Object)}});
+ });
+ it("accepts maximum-length fields and offset timestamps",async()=>{
+  const app=createApp({authenticate:async()=>({id:"test-user"}),taskRepository:new InMemoryTaskRepository()});
+  const response=await request(app).post("/api/v1/tasks").send({title:"x".repeat(160),description:"x".repeat(5000),dueAt:"2026-11-11T12:00:00-03:00"});
+  expect(response.status).toBe(201);
+  expect(response.body.data.dueAt).toBe("2026-11-11T15:00:00.000Z");
  });
 });

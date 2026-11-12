@@ -1,3 +1,9 @@
+> Historical baseline from the first review. Authentication, ownership and
+> Vercel API routing have since been implemented on the authentication branch;
+> hosted activation remains pending. Production dependency advisories were
+resolved in the subsequent dependency hardening work; see DEPENDENCIES.md. See
+> DEPLOYMENT.md and SECURITY.md for the current design.
+
 # Engineering review — 2026-11-11
 
 ## Scope and findings

@@ -19,7 +19,7 @@ A migração inicial cria `Task`, `TaskActivity`, enums, índices e a chave estr
 - `PATCH /api/v1/tasks/:id`
 - `DELETE /api/v1/tasks/:id`
 
-Autenticação e autorização por usuário ainda não estão implementadas. Não exponha a API com dados pessoais.
+A API exige um Bearer token validado pelo Supabase Auth e restringe todos os acessos ao dono da tarefa. O modo local exige configuração explícita de desenvolvimento. Consulte [security](../../docs/SECURITY.md) e [deployment](../../docs/DEPLOYMENT.md).
 
 ## Testes de persistência
 

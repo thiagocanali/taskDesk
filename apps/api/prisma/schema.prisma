@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum TaskStatus {
@@ -22,6 +21,7 @@ enum TaskPriority {
 }
 
 model Task {
+  ownerId     String?        @db.Uuid
   id          String         @id @default(cuid())
   title       String         @db.VarChar(160)
   description String?        @db.Text
@@ -34,8 +34,8 @@ model Task {
   updatedAt   DateTime       @updatedAt
   activities  TaskActivity[]
 
-  @@index([status, priority])
-  @@index([dueAt])
+  @@index([ownerId, status, priority])
+  @@index([ownerId, dueAt])
 }
 
 model TaskActivity {
