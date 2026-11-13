@@ -80,6 +80,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Prisma task persistence", () =>
    expect(list.body.data.map((task: {id:string})=>task.id)).toEqual(token==="alice"?[id]:[]);
    expect((await request(app).get(`/api/v1/tasks/${legacy.id}`).set("Authorization",`Bearer ${token}`)).status).toBe(404);
   }
+  const alicePage=await request(app).get("/api/v1/tasks?page=1&limit=1").set("Authorization","Bearer alice");
+  const bobPage=await request(app).get("/api/v1/tasks?page=1&limit=1").set("Authorization","Bearer bob");
+  expect(alicePage.body.pagination).toEqual({page:1,limit:1,total:1,totalPages:1});
+  expect(alicePage.body.data.map((task: {id:string})=>task.id)).toEqual([id]);
+  expect(bobPage.body.pagination).toEqual({page:1,limit:1,total:0,totalPages:0});
+  expect(bobPage.body.data).toEqual([]);
   for(const suffix of ["", "/activities"]){
    expect((await request(app).get(`/api/v1/tasks/${id}${suffix}`).set("Authorization","Bearer bob")).status).toBe(404);
   }
