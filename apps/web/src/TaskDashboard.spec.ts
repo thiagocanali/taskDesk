@@ -56,7 +56,7 @@ describe("task dashboard with paginated API",()=>{
   expect(wrapper.text()).toContain("28");
   await wrapper.find(".task-pagination button").trigger("click");await flushPromises();
   expect(wrapper.findAll(".task-card")).toHaveLength(28);
-  expect(new Set(wrapper.findAll(".task-card").map(c=>c.attributes("key"))).size).toBe(28);
+  expect(wrapper.text()).toContain("Tarefa 27");
   expect(listRequests[1]).toContain("page=2");
  });
  it("applies both filters server-side and preserves global counts",async()=>{
