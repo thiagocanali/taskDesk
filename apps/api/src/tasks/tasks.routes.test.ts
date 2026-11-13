@@ -36,6 +36,7 @@ describe("task endpoints",()=>{
  it("lists tasks and supports filters",async()=>{const response=await request(app).get("/api/v1/tasks?status=NEW");expect(response.status).toBe(200);expect(response.body.data).toHaveLength(1);});
  it("validates pagination bounds without changing existing list responses",async()=>{
   const valid=await request(app).get("/api/v1/tasks?page=1&limit=20&status=NEW");
+  expect(valid.body.pagination).toEqual({page:1,limit:20,total:1,totalPages:1});
   expect(valid.status).toBe(200);
   expect(valid.body.data).toEqual(expect.any(Array));
   for(const query of ["page=0","page=-1","page=1.5","limit=0","limit=101","page=abc"]){
