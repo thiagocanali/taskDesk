@@ -9,6 +9,7 @@ export interface AppOptions {
   taskRepository?: TaskRepository;
   repositoryForUser?: (userId: string) => TaskRepository;
   authenticate?: Authenticate;
+  readinessCheck?: () => Promise<void>;
 }
 
 export function createApp(options: AppOptions = {}) {
@@ -28,6 +29,18 @@ export function createApp(options: AppOptions = {}) {
   app.get("/health", (_request, response) => response.status(200).json({
     status: "ok", service: "taskdesk-api", timestamp: new Date().toISOString(),
   }));
+  app.get("/ready", async (_request, response) => {
+    try {
+      if (options.readinessCheck) {
+        await options.readinessCheck();
+      } else {
+        await (prisma ??= createPrismaClient()).$queryRaw\`SELECT 1\`;
+      }
+      response.status(200).json({ status: "ready" });
+    } catch {
+      response.status(503).json({ status: "unavailable" });
+    }
+  });
   app.get("/api/v1", (_request, response) => response.status(200).json({
     name: "taskDesk API", version: "v1", status: "available",
   }));
