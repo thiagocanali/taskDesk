@@ -47,3 +47,7 @@
 - [x] Upgrade Vite/Vitest and Vue tooling to remove high/critical development advisories.
 - [ ] Track remaining moderate advisories in the Vue test formatting dependency chain.
 - [ ] Retention/deletion review, auditability, operational alerts, accessibility.
+
+## Pagination rollout (in progress)
+
+The task list API now accepts optional `page` (1-based, up to 100000) and `limit` (1–100, default 50 when paging). These parameters are validated at the API boundary and translated to Prisma `skip`/`take` with ownership and status/priority filters preserved. Existing requests without pagination parameters remain unchanged for compatibility with the current dashboard. **This is not the final scalability milestone:** the dashboard still loads the full list; next steps are frontend progressive loading, stable tie-break ordering, server-side counts and search, and then making bounded paging mandatory. Do not describe the current API as fully scalable.
