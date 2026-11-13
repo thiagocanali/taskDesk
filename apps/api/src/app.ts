@@ -34,7 +34,7 @@ export function createApp(options: AppOptions = {}) {
       if (options.readinessCheck) {
         await options.readinessCheck();
       } else {
-        await (prisma ??= createPrismaClient()).$queryRaw\`SELECT 1\`;
+        await (prisma ??= createPrismaClient()).$queryRaw`SELECT 1`;
       }
       response.status(200).json({ status: "ready" });
     } catch {
