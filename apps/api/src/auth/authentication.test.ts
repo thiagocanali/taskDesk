@@ -6,7 +6,7 @@ import type { TaskRepository } from "../tasks/task.types.js";
 
 const owner = "11111111-1111-4111-8111-111111111111";
 const repository = {
- list: vi.fn(async () => []), count: vi.fn(async () => 0), findById: async () => null, listActivities: async () => [],
+ list: vi.fn(async () => []), count: vi.fn(async () => 0), summary: vi.fn(async () => ({total:0,inProgress:0,waiting:0,completed:0,overdue:0,dueSoon:0})), findById: async () => null, listActivities: async () => [],
  create: async () => { throw new Error(); }, update: async () => null, delete: async () => false,
 } satisfies TaskRepository;
 const env = {SUPABASE_URL:"https://auth.example.test", SUPABASE_PUBLISHABLE_KEY:"sb_publishable_test"};

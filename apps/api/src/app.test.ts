@@ -7,6 +7,7 @@ function createRepository(overrides:Partial<TaskRepository>={}):TaskRepository {
  return {
   list:async()=>[],
   count:async()=>0,
+  summary:async()=>({total:0,inProgress:0,waiting:0,completed:0,overdue:0,dueSoon:0}),
   findById:async()=>null,
   listActivities:async()=>[],
   create:async()=>{throw new Error("secret task content should not be logged");},
