@@ -12,7 +12,7 @@ export interface UpdateTaskInput { title?:string; description?:string|null; stat
 export interface ListTaskFilters { status?:TaskStatus; priority?:TaskPriority; page?:number; limit?:number; }
 export interface TaskRepository {
  list(filters:ListTaskFilters):Promise<TaskRecord[]>;
- count?(filters:ListTaskFilters):Promise<number>;
+ count(filters:ListTaskFilters):Promise<number>;
  findById(id:string):Promise<TaskRecord|null>;
  listActivities(taskId:string):Promise<TaskActivityRecord[]>;
  /** Atomically persist the task and its creation activity. */

@@ -31,7 +31,7 @@ export function createTasksRouter(repository: TaskRepository): Router {
       const limit = filters.data.limit ?? 50;
       const [data, total] = await Promise.all([
         repository.list({ ...filters.data, page, limit }),
-        repository.count ? repository.count(filters.data) : repository.list({ status: filters.data.status, priority: filters.data.priority }).then(items => items.length),
+        repository.count(filters.data),
       ]);
       response.status(200).json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
       return;

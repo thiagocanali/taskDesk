@@ -10,6 +10,7 @@ class InMemoryTaskRepository implements TaskRepository {
  async list(filters:ListTaskFilters):Promise<TaskRecord[]> {
   return this.tasks.filter(task=>(!filters.status||task.status===filters.status)&&(!filters.priority||task.priority===filters.priority));
  }
+ async count(filters:ListTaskFilters):Promise<number>{return (await this.list(filters)).length;}
  async listActivities(taskId:string):Promise<TaskActivityRecord[]>{return this.activities.filter(activity=>activity.taskId===taskId);}
  async addActivity(taskId:string,type:string,message:string):Promise<TaskActivityRecord>{const activity={id:`activity-${this.activities.length+1}`,taskId,type,message,createdAt:new Date()};this.activities.push(activity);return activity;}
  async findById(id:string):Promise<TaskRecord|null>{return this.tasks.find(task=>task.id===id)??null;}
