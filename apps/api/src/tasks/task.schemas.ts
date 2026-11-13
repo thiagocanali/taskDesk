@@ -18,5 +18,7 @@ export const updateTaskSchema = z.object({
 }).strict().refine(value => Object.keys(value).length > 0,{message:"Informe ao menos um campo para atualização."});
 export const taskFilterSchema = z.object({
  status:z.enum(TASK_STATUSES).optional(),
- priority:z.enum(TASK_PRIORITIES).optional()
+ priority:z.enum(TASK_PRIORITIES).optional(),
+ page:z.coerce.number().int().min(1).max(100000).optional(),
+ limit:z.coerce.number().int().min(1).max(100).optional()
 }).strict();

@@ -9,9 +9,10 @@ export interface TaskRecord {
 }
 export interface CreateTaskInput { title:string; description?:string; priority?:TaskPriority; dueAt?:Date|null; origin?:string; }
 export interface UpdateTaskInput { title?:string; description?:string|null; status?:TaskStatus; priority?:TaskPriority; dueAt?:Date|null; origin?:string|null; }
-export interface ListTaskFilters { status?:TaskStatus; priority?:TaskPriority; }
+export interface ListTaskFilters { status?:TaskStatus; priority?:TaskPriority; page?:number; limit?:number; }
 export interface TaskRepository {
  list(filters:ListTaskFilters):Promise<TaskRecord[]>;
+ count(filters:ListTaskFilters):Promise<number>;
  findById(id:string):Promise<TaskRecord|null>;
  listActivities(taskId:string):Promise<TaskActivityRecord[]>;
  /** Atomically persist the task and its creation activity. */

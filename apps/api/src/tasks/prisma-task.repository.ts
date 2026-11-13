@@ -17,8 +17,15 @@ export class PrismaTaskRepository implements TaskRepository {
 
   async list(filters: ListTaskFilters): Promise<TaskRecord[]> {
     return this.prisma.task.findMany({
-      where: { ...filters, ownerId: this.ownerId },
-      orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+      where: { status: filters.status, priority: filters.priority, ownerId: this.ownerId },
+      ...(filters.page !== undefined || filters.limit !== undefined ? { skip: ((filters.page ?? 1) - 1) * (filters.limit ?? 50), take: filters.limit ?? 50 } : {}),
+      orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+    });
+  }
+
+  async count(filters: ListTaskFilters): Promise<number> {
+    return this.prisma.task.count({
+      where: { ownerId: this.ownerId, status: filters.status, priority: filters.priority },
     });
   }
 
