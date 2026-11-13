@@ -187,7 +187,7 @@ async function createTask() {
     dueAt: form.value.dueAt ? new Date(`${form.value.dueAt}T12:00:00`).toISOString() : undefined,
   };
   try {
-    const result = await request<{ data: Task }>(taskUrl(), {
+    await request<{ data: Task }>(taskUrl(), {
       method: "POST",
       body: JSON.stringify(payload),
     });
