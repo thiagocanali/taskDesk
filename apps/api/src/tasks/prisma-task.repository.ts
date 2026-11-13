@@ -29,6 +29,24 @@ export class PrismaTaskRepository implements TaskRepository {
     });
   }
 
+  async summary() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 8);
+    const ownerId = this.ownerId;
+    const incomplete = { status: { not: "COMPLETED" as const } };
+    const [total, inProgress, waiting, completed, overdue, dueSoon] = await Promise.all([
+      this.prisma.task.count({ where: { ownerId } }),
+      this.prisma.task.count({ where: { ownerId, status: "IN_PROGRESS" } }),
+      this.prisma.task.count({ where: { ownerId, status: "WAITING" } }),
+      this.prisma.task.count({ where: { ownerId, status: "COMPLETED" } }),
+      this.prisma.task.count({ where: { ownerId, ...incomplete, dueAt: { lt: today } } }),
+      this.prisma.task.count({ where: { ownerId, ...incomplete, dueAt: { gte: today, lt: nextWeek } } }),
+    ]);
+    return { total, inProgress, waiting, completed, overdue, dueSoon };
+  }
+
   async findById(id: string): Promise<TaskRecord | null> {
     return this.prisma.task.findFirst({ where: { id, ownerId: this.ownerId } });
   }

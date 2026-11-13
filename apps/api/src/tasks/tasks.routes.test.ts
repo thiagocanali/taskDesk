@@ -11,6 +11,7 @@ class InMemoryTaskRepository implements TaskRepository {
   return this.tasks.filter(task=>(!filters.status||task.status===filters.status)&&(!filters.priority||task.priority===filters.priority));
  }
  async count(filters:ListTaskFilters):Promise<number>{return (await this.list(filters)).length;}
+ async summary(){return {total:this.tasks.length,inProgress:this.tasks.filter(t=>t.status==="IN_PROGRESS").length,waiting:this.tasks.filter(t=>t.status==="WAITING").length,completed:this.tasks.filter(t=>t.status==="COMPLETED").length,overdue:0,dueSoon:0};}
  async listActivities(taskId:string):Promise<TaskActivityRecord[]>{return this.activities.filter(activity=>activity.taskId===taskId);}
  async addActivity(taskId:string,type:string,message:string):Promise<TaskActivityRecord>{const activity={id:`activity-${this.activities.length+1}`,taskId,type,message,createdAt:new Date()};this.activities.push(activity);return activity;}
  async findById(id:string):Promise<TaskRecord|null>{return this.tasks.find(task=>task.id===id)??null;}
@@ -35,6 +36,11 @@ describe("task endpoints",()=>{
  });
  it("rejects invalid task data",async()=>{const response=await request(app).post("/api/v1/tasks").send({title:"   ",unexpected:true});expect(response.status).toBe(400);});
  it("lists tasks and supports filters",async()=>{const response=await request(app).get("/api/v1/tasks?status=NEW");expect(response.status).toBe(200);expect(response.body.data).toHaveLength(1);});
+ it("returns owner task summary without pagination",async()=>{
+  const response=await request(app).get("/api/v1/tasks/summary");
+  expect(response.status).toBe(200);
+  expect(response.body.data).toMatchObject({total:1,inProgress:0,waiting:0,completed:0});
+ });
  it("validates pagination bounds without changing existing list responses",async()=>{
   const valid=await request(app).get("/api/v1/tasks?page=1&limit=20&status=NEW");
   expect(valid.body.pagination).toEqual({page:1,limit:20,total:1,totalPages:1});

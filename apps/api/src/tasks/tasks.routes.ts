@@ -39,6 +39,10 @@ export function createTasksRouter(repository: TaskRepository): Router {
     response.status(200).json({ data: await repository.list(filters.data) });
   });
 
+  router.get("/summary", async (_request: Request, response: Response) => {
+    response.status(200).json({ data: await repository.summary() });
+  });
+
   router.post("/", async (request: Request, response: Response) => {
     const input = createTaskSchema.safeParse(request.body);
     if (!input.success) {
