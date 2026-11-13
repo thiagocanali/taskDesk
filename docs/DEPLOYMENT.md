@@ -69,3 +69,10 @@ Vercel database connection is configured.
 
 The existing connected task-desk Vercel project had no environment variables at
 review time. Hosted activation remains pending project selection and credentials.
+
+## Health and readiness probes
+
+- GET /health is a public liveness probe and does not access PostgreSQL.
+- GET /ready is a public database readiness probe. It runs a minimal SELECT 1 through the same Prisma connection pool used by the API. HTTP 200 means the query succeeded; HTTP 503 means unavailable. It does not reveal credentials or database error details.
+- A successful /ready response does not establish that migrations, RLS, Supabase Auth, or task CRUD work. Verify those independently before accepting real data.
+- Monitor both probes separately; alert on repeated /ready failures while /health remains healthy. Avoid exposing either endpoint as proof of production readiness on its own.
