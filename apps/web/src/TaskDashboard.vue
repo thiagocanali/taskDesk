@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { accessToken } from "./auth";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 type TaskStatus = "NEW" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
@@ -29,6 +29,14 @@ interface TaskPayload {
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 const tasks = ref<Task[]>([]);
+interface TaskSummary { total:number; inProgress:number; waiting:number; completed:number; overdue:number; dueSoon:number; }
+interface TaskPage { data:Task[]; pagination:{page:number;limit:number;total:number;totalPages:number}; }
+const summary = ref<TaskSummary | null>(null);
+const page = ref(1);
+const pageSize = 25;
+const filteredTotal = ref(0);
+const loadingMore = ref(false);
+let loadGeneration = 0;
 const loading = ref(true);
 const saving = ref(false);
 const errorMessage = ref("");
@@ -60,11 +68,7 @@ const priorityLabels: Record<TaskPriority, string> = {
   URGENT: "Urgente",
 };
 
-const visibleTasks = computed(() => tasks.value.filter((task) => {
-  const matchesStatus = statusFilter.value === "ALL" || task.status === statusFilter.value;
-  const matchesPriority = priorityFilter.value === "ALL" || task.priority === priorityFilter.value;
-  return matchesStatus && matchesPriority;
-}));
+const visibleTasks = computed(() => tasks.value);
 
 function localDateKey(date: Date) {
   const year = date.getFullYear();
@@ -87,11 +91,11 @@ function dueStateLabel(task: Task) {
   return state === "overdue" ? "Atrasada" : state === "soon" ? "Prazo próximo" : "";
 }
 
-const overdueCount = computed(() => tasks.value.filter((task) => dueState(task) === "overdue").length);
-const dueSoonCount = computed(() => tasks.value.filter((task) => dueState(task) === "soon").length);
-const activeCount = computed(() => tasks.value.filter((task) => task.status === "IN_PROGRESS").length);
-const waitingCount = computed(() => tasks.value.filter((task) => task.status === "WAITING").length);
-const completedCount = computed(() => tasks.value.filter((task) => task.status === "COMPLETED").length);
+const overdueCount = computed(() => summary.value?.overdue ?? 0);
+const dueSoonCount = computed(() => summary.value?.dueSoon ?? 0);
+const activeCount = computed(() => summary.value?.inProgress ?? 0);
+const waitingCount = computed(() => summary.value?.waiting ?? 0);
+const completedCount = computed(() => summary.value?.completed ?? 0);
 
 function taskUrl(path = "/tasks") {
   return `${apiBase}/api/v1${path}`;
@@ -113,24 +117,62 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 async function loadTasks() {
+  const generation = ++loadGeneration;
   loading.value = true;
   errorMessage.value = "";
-  successMessage.value = "";
   retryLoadAvailable.value = false;
+  page.value = 1;
+  tasks.value = [];
+  summary.value = null;
   try {
-    const result = await request<{ data: Task[] }>(taskUrl());
+    const query = new URLSearchParams({ page: "1", limit: String(pageSize) });
+    if (statusFilter.value !== "ALL") query.set("status", statusFilter.value);
+    if (priorityFilter.value !== "ALL") query.set("priority", priorityFilter.value);
+    const [result, overview] = await Promise.all([
+      request<TaskPage>(taskUrl() + "?" + query.toString()),
+      request<{data:TaskSummary}>(taskUrl("/tasks/summary")),
+    ]);
+    if (generation !== loadGeneration) return;
     tasks.value = result.data;
+    filteredTotal.value = result.pagination.total;
+    summary.value = overview.data;
     taskLoadFailed.value = false;
     apiConnected.value = true;
   } catch (error) {
+    if (generation !== loadGeneration) return;
     errorMessage.value = error instanceof Error ? error.message : "Falha ao carregar tarefas.";
     taskLoadFailed.value = true;
     apiConnected.value = false;
     retryLoadAvailable.value = true;
   } finally {
-    loading.value = false;
+    if (generation === loadGeneration) loading.value = false;
   }
 }
+
+async function loadMoreTasks() {
+  if (loading.value || loadingMore.value || tasks.value.length >= filteredTotal.value) return;
+  const generation = loadGeneration;
+  loadingMore.value = true;
+  errorMessage.value = "";
+  try {
+    const nextPage = page.value + 1;
+    const query = new URLSearchParams({ page: String(nextPage), limit: String(pageSize) });
+    if (statusFilter.value !== "ALL") query.set("status", statusFilter.value);
+    if (priorityFilter.value !== "ALL") query.set("priority", priorityFilter.value);
+    const result = await request<TaskPage>(taskUrl() + "?" + query.toString());
+    if (generation !== loadGeneration) return;
+    const seen = new Set(tasks.value.map(task => task.id));
+    tasks.value = [...tasks.value, ...result.data.filter(task => !seen.has(task.id))];
+    page.value = nextPage;
+    filteredTotal.value = result.pagination.total;
+  } catch (error) {
+    if (generation === loadGeneration) errorMessage.value = error instanceof Error ? error.message : "Falha ao carregar mais tarefas.";
+  } finally {
+    loadingMore.value = false;
+  }
+}
+
+watch([statusFilter, priorityFilter], () => { void loadTasks(); });
 
 async function createTask() {
   if (!form.value.title.trim()) return;
@@ -145,11 +187,11 @@ async function createTask() {
     dueAt: form.value.dueAt ? new Date(`${form.value.dueAt}T12:00:00`).toISOString() : undefined,
   };
   try {
-    const result = await request<{ data: Task }>(taskUrl(), {
+    await request<{ data: Task }>(taskUrl(), {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    tasks.value = [result.data, ...tasks.value];
+    await loadTasks();
     form.value = { title: "", description: "", priority: "NORMAL", dueAt: "" };
     successMessage.value = "Tarefa criada com sucesso.";
   } catch (error) {
@@ -164,11 +206,11 @@ async function updateStatus(task: Task, status: TaskStatus) {
   successMessage.value = "";
   retryLoadAvailable.value = false;
   try {
-    const result = await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
+    await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
-    tasks.value = tasks.value.map((item) => item.id === task.id ? result.data : item);
+    await loadTasks();
     delete activities.value[task.id];
     if (expandedTaskId.value === task.id) expandedTaskId.value = null;
     successMessage.value = "Status atualizado.";
@@ -248,11 +290,11 @@ async function saveTask(task: Task) {
         ? new Date(`${editForm.value.dueAt}T12:00:00`).toISOString()
         : null,
     };
-    const result = await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
+    await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    tasks.value = tasks.value.map((item) => item.id === task.id ? result.data : item);
+    await loadTasks();
     delete activities.value[task.id];
     if (expandedTaskId.value === task.id) expandedTaskId.value = null;
     editingTaskId.value = null;
@@ -272,7 +314,7 @@ async function deleteTask(task: Task) {
   retryLoadAvailable.value = false;
   try {
     await request<void>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), { method: "DELETE" });
-    tasks.value = tasks.value.filter((item) => item.id !== task.id);
+    await loadTasks();
     const nextActivities = { ...activities.value };
     delete nextActivities[task.id];
     activities.value = nextActivities;
@@ -333,7 +375,7 @@ onMounted(loadTasks);
         <div v-if="successMessage" class="feedback feedback-success" role="status">{{ successMessage }}</div>
 
         <section class="summary-grid" aria-label="Resumo de tarefas">
-          <article class="summary-card"><span class="summary-label">Total de tarefas</span><strong>{{ apiConnected === false ? "—" : String(tasks.length).padStart(2, "0") }}</strong><span class="summary-foot">Registros salvos na API</span></article>
+          <article class="summary-card"><span class="summary-label">Total de tarefas</span><strong>{{ apiConnected === false ? "—" : String(summary?.total ?? 0).padStart(2, "0") }}</strong><span class="summary-foot">Registros salvos na API</span></article>
           <article class="summary-card"><span class="summary-label">Em andamento</span><strong>{{ apiConnected === false ? "—" : String(activeCount).padStart(2, "0") }}</strong><span class="summary-foot">Trabalho ativo</span></article>
           <article class="summary-card"><span class="summary-label">Aguardando retorno</span><strong>{{ apiConnected === false ? "—" : String(waitingCount).padStart(2, "0") }}</strong><span class="summary-foot">Dependem de terceiros</span></article>
           <article class="summary-card"><span class="summary-label">Concluídas</span><strong>{{ apiConnected === false ? "—" : String(completedCount).padStart(2, "0") }}</strong><span class="summary-foot">Finalizadas</span></article>
@@ -344,7 +386,7 @@ onMounted(loadTasks);
         <section class="tasks-section" id="tasks">
           <div class="section-heading">
             <div><h2>Suas tarefas</h2><p>Crie e acompanhe suas próximas ações.</p></div>
-            <span class="task-count">{{ apiConnected === false ? "Dados indisponíveis" : `${visibleTasks.length} de ${tasks.length} tarefa(s)` }}</span>
+            <span class="task-count">{{ apiConnected === false ? "Dados indisponíveis" : `${visibleTasks.length} de ${filteredTotal} tarefa(s) no filtro` }}</span>
           </div>
 
           <form class="task-form" @submit.prevent="createTask">
@@ -375,8 +417,8 @@ onMounted(loadTasks);
 
           <div v-if="loading" class="empty-state" role="status">Carregando tarefas...</div>
           <div v-else-if="visibleTasks.length === 0 && !taskLoadFailed" class="empty-state">
-            <strong>{{ tasks.length === 0 ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
-            <p>{{ tasks.length === 0 ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
+            <strong>{{ filteredTotal === 0 && statusFilter === "ALL" && priorityFilter === "ALL" ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
+            <p>{{ filteredTotal === 0 && statusFilter === "ALL" && priorityFilter === "ALL" ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
           </div>
           <div v-else-if="!taskLoadFailed" class="task-list">
             <article v-for="task in visibleTasks" :key="task.id" class="task-card">
@@ -432,6 +474,9 @@ onMounted(loadTasks);
           <div v-else class="empty-state" role="status">
             <strong>Não foi possível carregar as tarefas.</strong>
             <p>Os dados anteriores não serão apresentados como se fossem atuais. Tente carregar novamente.</p>
+          </div>
+          <div v-if="!loading && !taskLoadFailed && tasks.length < filteredTotal" class="task-pagination">
+            <button class="secondary-button" type="button" :disabled="loadingMore" @click="loadMoreTasks">{{ loadingMore ? "Carregando..." : "Carregar mais tarefas" }}</button>
           </div>
         </section>
 
