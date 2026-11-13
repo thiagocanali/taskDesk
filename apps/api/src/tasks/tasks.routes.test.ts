@@ -34,6 +34,15 @@ describe("task endpoints",()=>{
  });
  it("rejects invalid task data",async()=>{const response=await request(app).post("/api/v1/tasks").send({title:"   ",unexpected:true});expect(response.status).toBe(400);});
  it("lists tasks and supports filters",async()=>{const response=await request(app).get("/api/v1/tasks?status=NEW");expect(response.status).toBe(200);expect(response.body.data).toHaveLength(1);});
+ it("validates pagination bounds without changing existing list responses",async()=>{
+  const valid=await request(app).get("/api/v1/tasks?page=1&limit=20&status=NEW");
+  expect(valid.status).toBe(200);
+  expect(valid.body.data).toEqual(expect.any(Array));
+  for(const query of ["page=0","page=-1","page=1.5","limit=0","limit=101","page=abc"]){
+   const invalid=await request(app).get("/api/v1/tasks?"+query);
+   expect(invalid.status).toBe(400);
+  }
+ });
  it("records the previous and new status in task history",async()=>{
   const response=await request(app).patch("/api/v1/tasks/task-1").send({status:"IN_PROGRESS"});
   expect(response.status).toBe(200);expect(response.body.data.status).toBe("IN_PROGRESS");
