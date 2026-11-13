@@ -206,7 +206,7 @@ async function updateStatus(task: Task, status: TaskStatus) {
   successMessage.value = "";
   retryLoadAvailable.value = false;
   try {
-    const result = await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
+    await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
@@ -290,7 +290,7 @@ async function saveTask(task: Task) {
         ? new Date(`${editForm.value.dueAt}T12:00:00`).toISOString()
         : null,
     };
-    const result = await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
+    await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
