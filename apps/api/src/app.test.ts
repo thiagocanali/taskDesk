@@ -6,6 +6,7 @@ import type { TaskRepository } from "./tasks/task.types.js";
 function createRepository(overrides:Partial<TaskRepository>={}):TaskRepository {
  return {
   list:async()=>[],
+  count:async()=>0,
   findById:async()=>null,
   listActivities:async()=>[],
   create:async()=>{throw new Error("secret task content should not be logged");},
