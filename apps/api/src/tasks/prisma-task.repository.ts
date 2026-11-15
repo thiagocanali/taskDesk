@@ -46,9 +46,9 @@ export class PrismaTaskRepository implements TaskRepository {
 
   async summary() {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
     const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 8);
+    nextWeek.setUTCDate(nextWeek.getUTCDate() + 8);
     const ownerId = this.ownerId;
     const incomplete = { status: { not: "COMPLETED" as const } };
     const [total, inProgress, waiting, completed, overdue, dueSoon] = await Promise.all([
