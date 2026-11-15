@@ -21,7 +21,11 @@ export function createAuthRouter(prisma: PrismaClient) {
    response.status(429).json({error:"Muitas tentativas. Tente novamente mais tarde."});
    return;
   }
-  if(attempts.size<MAX_BUCKETS || attempts.has(key)) attempts.set(key,{count:(previous && previous.until>now ? previous.count:0)+1,until:previous && previous.until>now?previous.until:now+WINDOW_MS});
+  if(attempts.size>=MAX_BUCKETS && !attempts.has(key)) {
+   response.status(429).json({error:"Muitas tentativas. Tente novamente mais tarde."});
+   return;
+  }
+  attempts.set(key,{count:(previous && previous.until>now ? previous.count:0)+1,until:previous && previous.until>now?previous.until:now+WINDOW_MS});
   next();
  });
  router.post("/register",async(request,response)=>{
