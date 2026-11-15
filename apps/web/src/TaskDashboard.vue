@@ -49,6 +49,10 @@ const activityLoadingTaskId = ref<string | null>(null);
 const activityErrors = ref<Record<string, string>>({});
 const statusFilter = ref<"ALL" | TaskStatus>("ALL");
 const priorityFilter = ref<"ALL" | TaskPriority>("ALL");
+const searchDraft = ref("");
+const searchTerm = ref("");
+const sortOrder = ref<"dueAsc" | "dueDesc" | "newest" | "oldest">("dueAsc");
+function applySearch() { searchTerm.value = searchDraft.value.trim(); }
 const form = ref({ title: "", description: "", priority: "NORMAL" as TaskPriority, dueAt: "" });
 const editingTaskId = ref<string | null>(null);
 const expandedTaskId = ref<string | null>(null);
@@ -128,6 +132,8 @@ async function loadTasks() {
     const query = new URLSearchParams({ page: "1", limit: String(pageSize) });
     if (statusFilter.value !== "ALL") query.set("status", statusFilter.value);
     if (priorityFilter.value !== "ALL") query.set("priority", priorityFilter.value);
+    if (searchTerm.value) query.set("search", searchTerm.value);
+    query.set("sort", sortOrder.value);
     const [result, overview] = await Promise.all([
       request<TaskPage>(taskUrl() + "?" + query.toString()),
       request<{data:TaskSummary}>(taskUrl("/tasks/summary")),
@@ -159,6 +165,8 @@ async function loadMoreTasks() {
     const query = new URLSearchParams({ page: String(nextPage), limit: String(pageSize) });
     if (statusFilter.value !== "ALL") query.set("status", statusFilter.value);
     if (priorityFilter.value !== "ALL") query.set("priority", priorityFilter.value);
+    if (searchTerm.value) query.set("search", searchTerm.value);
+    query.set("sort", sortOrder.value);
     const result = await request<TaskPage>(taskUrl() + "?" + query.toString());
     if (generation !== loadGeneration) return;
     const seen = new Set(tasks.value.map(task => task.id));
@@ -172,7 +180,7 @@ async function loadMoreTasks() {
   }
 }
 
-watch([statusFilter, priorityFilter], () => { void loadTasks(); });
+watch([statusFilter, priorityFilter, searchTerm, sortOrder], () => { void loadTasks(); });
 
 async function createTask() {
   if (!form.value.title.trim()) return;
@@ -403,6 +411,8 @@ onMounted(loadTasks);
           </form>
 
           <div class="task-toolbar">
+            <div class="filter-field"><label class="field-label" for="task-search">Buscar tarefas</label><input id="task-search" v-model="searchDraft" type="search" placeholder="Título ou descrição" @change="applySearch" @keyup.enter="applySearch" /></div>
+            <div class="filter-field"><label class="field-label" for="task-sort">Ordenação</label><select id="task-sort" v-model="sortOrder" class="filter-select"><option value="dueAsc">Prazo mais próximo</option><option value="dueDesc">Prazo mais distante</option><option value="newest">Mais recentes</option><option value="oldest">Mais antigas</option></select></div>
             <div class="filter-field"><label class="field-label" for="status-filter">Status</label>
               <select id="status-filter" v-model="statusFilter" class="filter-select">
                 <option value="ALL">Todos os status</option><option value="NEW">Novas</option><option value="IN_PROGRESS">Em andamento</option><option value="WAITING">Aguardando retorno</option><option value="COMPLETED">Concluídas</option>
@@ -417,8 +427,8 @@ onMounted(loadTasks);
 
           <div v-if="loading" class="empty-state" role="status">Carregando tarefas...</div>
           <div v-else-if="visibleTasks.length === 0 && !taskLoadFailed" class="empty-state">
-            <strong>{{ filteredTotal === 0 && statusFilter === "ALL" && priorityFilter === "ALL" ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
-            <p>{{ filteredTotal === 0 && statusFilter === "ALL" && priorityFilter === "ALL" ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
+            <strong>{{ filteredTotal === 0 && statusFilter === "ALL" && priorityFilter === "ALL" && !searchTerm ? "Seu espaço ainda está vazio." : "Nenhuma tarefa neste filtro." }}</strong>
+            <p>{{ filteredTotal === 0 && statusFilter === "ALL" && priorityFilter === "ALL" && !searchTerm ? "Crie sua primeira tarefa no formulário acima." : "Ajuste os filtros de status ou prioridade para ver outras tarefas." }}</p>
           </div>
           <div v-else-if="!taskLoadFailed" class="task-list">
             <article v-for="task in visibleTasks" :key="task.id" class="task-card">
