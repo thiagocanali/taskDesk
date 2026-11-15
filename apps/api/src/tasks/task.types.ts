@@ -9,7 +9,7 @@ export interface TaskRecord {
 }
 export interface CreateTaskInput { title:string; description?:string; priority?:TaskPriority; dueAt?:Date|null; origin?:string; }
 export interface UpdateTaskInput { title?:string; description?:string|null; status?:TaskStatus; priority?:TaskPriority; dueAt?:Date|null; origin?:string|null; }
-export interface ListTaskFilters { status?:TaskStatus; priority?:TaskPriority; page?:number; limit?:number; }
+export interface ListTaskFilters { status?:TaskStatus; priority?:TaskPriority; page?:number; limit?:number; search?:string; sort?:"dueAsc"|"dueDesc"|"newest"|"oldest"; }
 export interface TaskSummary { total:number; inProgress:number; waiting:number; completed:number; overdue:number; dueSoon:number; }
 export interface TaskRepository {
  summary():Promise<TaskSummary>;

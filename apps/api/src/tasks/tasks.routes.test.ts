@@ -8,9 +8,16 @@ class InMemoryTaskRepository implements TaskRepository {
  private activities:TaskActivityRecord[]=[];
  private sequence=0;
  async list(filters:ListTaskFilters):Promise<TaskRecord[]> {
-  return this.tasks.filter(task=>(!filters.status||task.status===filters.status)&&(!filters.priority||task.priority===filters.priority));
+  const matching=this.tasks.filter(task=>(!filters.status||task.status===filters.status)&&(!filters.priority||task.priority===filters.priority)&&(!filters.search||[task.title,task.description??""].some(text=>text.toLowerCase().includes(filters.search!.toLowerCase()))));
+  const sorted=[...matching].sort((a,b)=>{
+   if(filters.sort==="newest")return b.createdAt.getTime()-a.createdAt.getTime()||a.id.localeCompare(b.id);
+   if(filters.sort==="oldest")return a.createdAt.getTime()-b.createdAt.getTime()||a.id.localeCompare(b.id);
+   const dateA=a.dueAt?.getTime()??Number.MAX_SAFE_INTEGER,dateB=b.dueAt?.getTime()??Number.MAX_SAFE_INTEGER;
+   return (filters.sort==="dueDesc"?dateB-dateA:dateA-dateB)||a.id.localeCompare(b.id);
+  });
+  return filters.page!==undefined||filters.limit!==undefined?sorted.slice(((filters.page??1)-1)*(filters.limit??50),(filters.page??1)*(filters.limit??50)):sorted;
  }
- async count(filters:ListTaskFilters):Promise<number>{return (await this.list(filters)).length;}
+ async count(filters:ListTaskFilters):Promise<number>{return (await this.list({...filters,page:undefined,limit:undefined})).length;}
  async summary(){return {total:this.tasks.length,inProgress:this.tasks.filter(t=>t.status==="IN_PROGRESS").length,waiting:this.tasks.filter(t=>t.status==="WAITING").length,completed:this.tasks.filter(t=>t.status==="COMPLETED").length,overdue:0,dueSoon:0};}
  async listActivities(taskId:string):Promise<TaskActivityRecord[]>{return this.activities.filter(activity=>activity.taskId===taskId);}
  async addActivity(taskId:string,type:string,message:string):Promise<TaskActivityRecord>{const activity={id:`activity-${this.activities.length+1}`,taskId,type,message,createdAt:new Date()};this.activities.push(activity);return activity;}
@@ -36,6 +43,14 @@ describe("task endpoints",()=>{
  });
  it("rejects invalid task data",async()=>{const response=await request(app).post("/api/v1/tasks").send({title:"   ",unexpected:true});expect(response.status).toBe(400);});
  it("lists tasks and supports filters",async()=>{const response=await request(app).get("/api/v1/tasks?status=NEW");expect(response.status).toBe(200);expect(response.body.data).toHaveLength(1);});
+ it("searches tasks and validates sort options",async()=>{
+  const found=await request(app).get("/api/v1/tasks?search=RELAT%C3%93RIO&sort=newest&page=1&limit=10");
+  expect(found.status).toBe(200);
+  expect(found.body.pagination.total).toBe(1);
+  expect(found.body.data[0].title).toBe("Preparar relatório");
+  expect((await request(app).get("/api/v1/tasks?sort=invalid")).status).toBe(400);
+  expect((await request(app).get("/api/v1/tasks?search=")).status).toBe(400);
+ });
  it("returns owner task summary without pagination",async()=>{
   const response=await request(app).get("/api/v1/tasks/summary");
   expect(response.status).toBe(200);

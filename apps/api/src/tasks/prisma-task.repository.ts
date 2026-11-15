@@ -15,17 +15,32 @@ import type {
 export class PrismaTaskRepository implements TaskRepository {
   constructor(private readonly prisma: PrismaClient, private readonly ownerId: string) {}
 
+  private where(filters: ListTaskFilters): Prisma.TaskWhereInput {
+    return {
+      ownerId: this.ownerId,
+      status: filters.status,
+      priority: filters.priority,
+      ...(filters.search ? { OR: [
+        { title: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+      ] } : {}),
+    };
+  }
+
   async list(filters: ListTaskFilters): Promise<TaskRecord[]> {
     return this.prisma.task.findMany({
-      where: { status: filters.status, priority: filters.priority, ownerId: this.ownerId },
+      where: this.where(filters),
       ...(filters.page !== undefined || filters.limit !== undefined ? { skip: ((filters.page ?? 1) - 1) * (filters.limit ?? 50), take: filters.limit ?? 50 } : {}),
-      orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+      orderBy: filters.sort === "newest" ? [{ createdAt: "desc" }, { id: "asc" }]
+        : filters.sort === "oldest" ? [{ createdAt: "asc" }, { id: "asc" }]
+        : filters.sort === "dueDesc" ? [{ dueAt: "desc" }, { createdAt: "desc" }, { id: "asc" }]
+        : [{ dueAt: "asc" }, { createdAt: "desc" }, { id: "asc" }],
     });
   }
 
   async count(filters: ListTaskFilters): Promise<number> {
     return this.prisma.task.count({
-      where: { ownerId: this.ownerId, status: filters.status, priority: filters.priority },
+      where: this.where(filters),
     });
   }
 

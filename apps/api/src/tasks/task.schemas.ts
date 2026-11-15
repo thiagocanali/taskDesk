@@ -19,6 +19,8 @@ export const updateTaskSchema = z.object({
 export const taskFilterSchema = z.object({
  status:z.enum(TASK_STATUSES).optional(),
  priority:z.enum(TASK_PRIORITIES).optional(),
+ search:z.string().trim().min(1).max(160).optional(),
+ sort:z.enum(["dueAsc","dueDesc","newest","oldest"]).optional(),
  page:z.coerce.number().int().min(1).max(100000).optional(),
  limit:z.coerce.number().int().min(1).max(100).optional()
 }).strict();
