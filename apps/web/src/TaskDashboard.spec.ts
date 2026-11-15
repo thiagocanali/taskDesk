@@ -24,7 +24,14 @@ describe("task dashboard with paginated API",()=>{
     listRequests.push(url);
     if(failure) return response({error:failure},500);
     const query=new URL(url,"https://example.test").searchParams;
-    const filtered=items.filter(t=>(!query.has("status")||t.status===query.get("status"))&&(!query.has("priority")||t.priority===query.get("priority")));
+    const filtered=items.filter(t=>(!query.has("status")||t.status===query.get("status"))&&(!query.has("priority")||t.priority===query.get("priority"))&&(!query.has("search")||[t.title,t.description??""].some(text=>text.toLocaleLowerCase().includes(query.get("search")!.toLocaleLowerCase()))));
+    const sort=query.get("sort")??"dueAsc";
+    filtered.sort((a,b)=>{
+      if(sort==="newest")return b.createdAt.localeCompare(a.createdAt)||a.id.localeCompare(b.id);
+      if(sort==="oldest")return a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id);
+      const aDue=a.dueAt??"9999",bDue=b.dueAt??"9999";
+      return (sort==="dueDesc"?bDue.localeCompare(aDue):aDue.localeCompare(bDue))||a.id.localeCompare(b.id);
+    });
     const page=Number(query.get("page")??1),limit=Number(query.get("limit")??25);
     return response({data:filtered.slice((page-1)*limit,page*limit),pagination:{page,limit,total:filtered.length,totalPages:Math.ceil(filtered.length/limit)}});
    }
@@ -69,6 +76,24 @@ describe("task dashboard with paginated API",()=>{
   expect(wrapper.text()).not.toContain("Normal em andamento");
   expect(listRequests.at(-1)).toContain("status=IN_PROGRESS");
   expect(listRequests.at(-1)).toContain("priority=HIGH");
+ });
+ it("searches title and description and preserves search and sort while loading more",async()=>{
+  items=Array.from({length:29},(_,i)=>makeTask("task-"+i,"Projeto "+i,{description:i<27?"Revisar contrato":"Sem correspondência",createdAt:new Date(Date.UTC(2026,10,1,0,0,i)).toISOString()}));
+  const wrapper=await render();
+  await wrapper.find("#task-search").setValue("contrato");
+  await wrapper.find("#task-search").trigger("change");
+  await wrapper.find("#task-sort").setValue("newest");
+  await flushPromises();
+  expect(wrapper.findAll(".task-card")).toHaveLength(25);
+  expect(wrapper.text()).toContain("Projeto 26");
+  expect(wrapper.text()).not.toContain("Projeto 28");
+  await wrapper.find(".task-pagination button").trigger("click");
+  await flushPromises();
+  expect(wrapper.findAll(".task-card")).toHaveLength(27);
+  const last=listRequests.at(-1)!;
+  expect(last).toContain("page=2");
+  expect(last).toContain("search=contrato");
+  expect(last).toContain("sort=newest");
  });
  it("reports API errors and retries without presenting stale tasks",async()=>{
   failure="API indisponível";
