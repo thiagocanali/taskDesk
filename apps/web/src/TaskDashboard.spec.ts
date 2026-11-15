@@ -90,7 +90,7 @@ describe("task dashboard with paginated API",()=>{
   expect(wrapper.text()).toContain("Status atualizado.");
   await wrapper.find(".task-card .secondary-button").trigger("click");
   const edit=wrapper.find("form.edit-form");
-  await edit.find("input[type=text]").setValue("Título editado");
+  await edit.find("input[id^=edit-title-]").setValue("Título editado");
   await edit.trigger("submit");await flushPromises();
   expect(wrapper.text()).toContain("Tarefa atualizada.");
   vi.spyOn(window,"confirm").mockReturnValue(true);
