@@ -59,6 +59,25 @@ describe("task dashboard with paginated API",()=>{
   expect(wrapper.text()).toContain("Tarefa 27");
   expect(listRequests[1]).toContain("page=2");
  });
+ it("ignores stale load-more results when filters change during pagination",async()=>{
+  items=Array.from({length:28},(_,i)=>makeTask("task-"+i,"Tarefa "+i));
+  const wrapper=await render();
+  let resolvePage!: (value:Response)=>void;
+  const pending=new Promise<Response>(resolve=>{resolvePage=resolve;});
+  const original=fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation((url:string,options?:RequestInit)=>{
+    if(url.includes("page=2")) return pending;
+    return original(url,options);
+  });
+  await wrapper.find(".task-pagination button").trigger("click");
+  await wrapper.find("#status-filter").setValue("COMPLETED");
+  await flushPromises();
+  expect(wrapper.findAll(".task-card")).toHaveLength(0);
+  resolvePage(response({data:items.slice(25),pagination:{page:2,limit:25,total:28,totalPages:2}}));
+  await flushPromises();
+  expect(wrapper.findAll(".task-card")).toHaveLength(0);
+  expect(wrapper.find(".task-pagination").exists()).toBe(false);
+ });
  it("applies both filters server-side and preserves global counts",async()=>{
   items=[makeTask("task-1","Alta em andamento",{status:"IN_PROGRESS",priority:"HIGH"}),makeTask("task-2","Normal em andamento",{status:"IN_PROGRESS"}),makeTask("task-3","Alta concluída",{status:"COMPLETED",priority:"HIGH"})];
   const wrapper=await render();
