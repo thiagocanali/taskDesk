@@ -1,7 +1,8 @@
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
 
-const scrypt = promisify(scryptCallback);
+const derive = (password: string, salt: Buffer): Promise<Buffer> =>
+ new Promise((resolve,reject) => scryptCallback(password,salt,KEY_BYTES,PARAMETERS,(error,key) =>
+  error ? reject(error) : resolve(key as Buffer)));
 const SALT_BYTES = 16;
 const KEY_BYTES = 64;
 const MAX_PASSWORD_BYTES = 1024;
@@ -15,7 +16,7 @@ export function validPassword(password: unknown): password is string {
 export async function hashPassword(password: string): Promise<string> {
  if (!validPassword(password)) throw new Error("Invalid password length");
  const salt=randomBytes(SALT_BYTES);
- const derived=await scrypt(password,salt,KEY_BYTES,PARAMETERS) as Buffer;
+ const derived=await derive(password,salt);
  return `scrypt-v1:${salt.toString("hex")}:${derived.toString("hex")}`;
 }
 
@@ -24,6 +25,6 @@ export async function verifyPassword(password: string, stored: string): Promise<
  const parts=/^scrypt-v1:([a-f0-9]{32}):([a-f0-9]{128})$/.exec(stored);
  if (!parts) return false;
  const expected=Buffer.from(parts[2],"hex");
- const actual=await scrypt(password,Buffer.from(parts[1],"hex"),KEY_BYTES,PARAMETERS) as Buffer;
+ const actual=await derive(password,Buffer.from(parts[1],"hex"));
  return timingSafeEqual(expected,actual);
 }
