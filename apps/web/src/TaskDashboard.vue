@@ -37,6 +37,7 @@ const pageSize = 25;
 const filteredTotal = ref(0);
 const loadingMore = ref(false);
 let loadGeneration = 0;
+let loadMoreGeneration = 0;
 const loading = ref(true);
 const saving = ref(false);
 const errorMessage = ref("");
@@ -122,12 +123,15 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
 async function loadTasks() {
   const generation = ++loadGeneration;
+  ++loadMoreGeneration;
+  loadingMore.value = false;
   loading.value = true;
   errorMessage.value = "";
   retryLoadAvailable.value = false;
   page.value = 1;
   tasks.value = [];
   summary.value = null;
+  filteredTotal.value = 0;
   try {
     const query = new URLSearchParams({ page: "1", limit: String(pageSize) });
     if (statusFilter.value !== "ALL") query.set("status", statusFilter.value);
@@ -158,6 +162,7 @@ async function loadTasks() {
 async function loadMoreTasks() {
   if (loading.value || loadingMore.value || tasks.value.length >= filteredTotal.value) return;
   const generation = loadGeneration;
+  const moreGeneration = ++loadMoreGeneration;
   loadingMore.value = true;
   errorMessage.value = "";
   try {
@@ -168,15 +173,15 @@ async function loadMoreTasks() {
     if (searchTerm.value) query.set("search", searchTerm.value);
     query.set("sort", sortOrder.value);
     const result = await request<TaskPage>(taskUrl() + "?" + query.toString());
-    if (generation !== loadGeneration) return;
+    if (generation !== loadGeneration || moreGeneration !== loadMoreGeneration) return;
     const seen = new Set(tasks.value.map(task => task.id));
     tasks.value = [...tasks.value, ...result.data.filter(task => !seen.has(task.id))];
     page.value = nextPage;
     filteredTotal.value = result.pagination.total;
   } catch (error) {
-    if (generation === loadGeneration) errorMessage.value = error instanceof Error ? error.message : "Falha ao carregar mais tarefas.";
+    if (generation === loadGeneration && moreGeneration === loadMoreGeneration) errorMessage.value = error instanceof Error ? error.message : "Falha ao carregar mais tarefas.";
   } finally {
-    loadingMore.value = false;
+    if (moreGeneration === loadMoreGeneration) loadingMore.value = false;
   }
 }
 
