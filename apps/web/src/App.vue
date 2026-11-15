@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import type { Session } from "@supabase/supabase-js";
-import { authClient, localMode } from "./auth";
+import { authClient, localMode, neonMode, neonSignIn, neonSignOut, neonRegister, neonRestore, clearNeonSession } from "./auth";
 import TaskDashboard from "./TaskDashboard.vue";
 
 const session = ref<Session | null>(null);
-const loading = ref(Boolean(authClient));
+const loading = ref(Boolean(authClient) || neonMode);
+const neonUser = ref<{id:string;email:string}|null>(null);
+const registering = ref(false);
 const saving = ref(false);
 const email = ref("");
 const password = ref("");
@@ -14,10 +16,13 @@ let unsubscribe: (() => void) | undefined;
 
 function sessionExpired() {
   session.value = null;
+  neonUser.value = null;
+  if (neonMode) clearNeonSession();
   error.value = "Sua sessão expirou. Entre novamente.";
 }
 
 onMounted(() => {
+  if (neonMode) void neonRestore().then(user => {neonUser.value=user;loading.value=false;}).catch(()=>{loading.value=false;});
   window.addEventListener("taskdesk:unauthorized", sessionExpired);
   if (!authClient) return;
   const { data } = authClient.auth.onAuthStateChange((_event, nextSession) => {
@@ -32,13 +37,18 @@ onUnmounted(() => {
 });
 
 async function signIn() {
-  if (!authClient || saving.value) return;
+  if ((!authClient && !neonMode) || saving.value) return;
   saving.value = true;
   error.value = "";
   try {
-    const result = await authClient.auth.signInWithPassword({email: email.value.trim(), password: password.value});
-    if (result.error) throw result.error;
-    session.value = result.data.session;
+    if (neonMode) {
+      if(registering.value) { await neonRegister(email.value.trim(),password.value); registering.value=false; }
+      neonUser.value=await neonSignIn(email.value.trim(),password.value);
+    } else {
+      const result = await authClient!.auth.signInWithPassword({email: email.value.trim(), password: password.value});
+      if (result.error) throw result.error;
+      session.value = result.data.session;
+    }
     password.value = "";
   } catch {
     error.value = "Não foi possível entrar. Confira seus dados e tente novamente.";
@@ -48,13 +58,16 @@ async function signIn() {
 }
 
 async function signOut() {
-  if (!authClient || saving.value) return;
+  if ((!authClient && !neonMode) || saving.value) return;
   saving.value = true;
   error.value = "";
   try {
-    const result = await authClient.auth.signOut({scope: "local"});
-    if (result.error) throw result.error;
-    session.value = null;
+    if (neonMode) { await neonSignOut(); neonUser.value=null; }
+    else {
+      const result = await authClient!.auth.signOut({scope: "local"});
+      if (result.error) throw result.error;
+      session.value = null;
+    }
     password.value = "";
   } catch {
     error.value = "Não foi possível sair. Tente novamente.";
@@ -65,31 +78,32 @@ async function signOut() {
 </script>
 
 <template>
-  <template v-if="localMode || session">
-    <div v-if="session" class="account-bar">
+  <template v-if="localMode || session || neonUser">
+    <div v-if="session || neonUser" class="account-bar">
       <span>Conta conectada</span>
       <span v-if="error" role="alert">{{ error }}</span>
       <button class="secondary-button" :disabled="saving" @click="signOut">Sair</button>
     </div>
-    <TaskDashboard :key="session?.user.id ?? 'local'" />
+    <TaskDashboard :key="neonUser?.id ?? session?.user.id ?? 'local'" />
   </template>
   <main v-else class="auth-shell">
     <section class="auth-card" aria-labelledby="auth-title">
       <p class="eyebrow">SEU ESPAÇO DE TRABALHO</p>
       <h1 id="auth-title">taskDesk</h1>
       <p v-if="loading" role="status">Verificando sua sessão...</p>
-      <template v-else-if="!authClient">
+      <template v-else-if="!authClient && !neonMode">
         <h2>Acesso indisponível</h2>
         <p>Estamos preparando seu espaço. Tente novamente mais tarde.</p>
       </template>
       <form v-else @submit.prevent="signIn">
-        <p>Entre para acessar suas tarefas.</p>
+        <p>{{ registering ? "Crie sua conta para começar." : "Entre para acessar suas tarefas." }}</p>
         <p v-if="error" class="feedback feedback-error" role="alert">{{ error }}</p>
         <label class="field-label" for="login-email">E-mail</label>
         <input id="login-email" v-model="email" type="email" autocomplete="username" required :disabled="saving" />
         <label class="field-label" for="login-password">Senha</label>
         <input id="login-password" v-model="password" type="password" autocomplete="current-password" required :disabled="saving" />
-        <button class="primary-button" type="submit" :disabled="saving">{{ saving ? "Entrando..." : "Entrar" }}</button>
+        <button class="primary-button" type="submit" :disabled="saving">{{ saving ? "Aguarde..." : registering ? "Cadastrar e entrar" : "Entrar" }}
+        <button v-if="neonMode" class="secondary-button" type="button" :disabled="saving" @click="registering = !registering">{{ registering ? "Já tenho conta" : "Criar conta" }}</button></button>
       </form>
     </section>
   </main>
