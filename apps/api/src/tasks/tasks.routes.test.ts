@@ -51,6 +51,18 @@ describe("task endpoints",()=>{
   expect((await request(app).get("/api/v1/tasks?sort=invalid")).status).toBe(400);
   expect((await request(app).get("/api/v1/tasks?search=")).status).toBe(400);
  });
+ it("caps legacy list requests while retaining the response shape",async()=>{
+  const created=[];
+  for(let i=0;i<55;i++)created.push(await repository.create({title:"Legacy cap "+i}));
+  const response=await request(app).get("/api/v1/tasks");
+  expect(response.status).toBe(200);
+  expect(response.body.data).toHaveLength(50);
+  expect(response.body.pagination).toBeUndefined();
+  const page=await request(app).get("/api/v1/tasks?page=2&limit=50");
+  expect(page.body.pagination.total).toBeGreaterThanOrEqual(55);
+  expect(page.body.data.length).toBeGreaterThan(0);
+  for(const task of created)await repository.delete(task.id);
+ });
  it("returns owner task summary without pagination",async()=>{
   const response=await request(app).get("/api/v1/tasks/summary");
   expect(response.status).toBe(200);
