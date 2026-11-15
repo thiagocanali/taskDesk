@@ -15,7 +15,7 @@ export interface AppOptions {
 export function createApp(options: AppOptions = {}) {
   const app = express();
   let prisma: ReturnType<typeof createPrismaClient> | undefined;
-  const authenticate = options.authenticate ?? createAuthenticator();
+  const authenticate = options.authenticate ?? createAuthenticator(process.env, process.env.AUTH_MODE === "neon" ? (prisma ??= createPrismaClient()) : undefined);
   const repositoryForUser = options.repositoryForUser ?? ((userId: string) =>
     options.taskRepository ?? new PrismaTaskRepository(prisma ??= createPrismaClient(), userId));
 
