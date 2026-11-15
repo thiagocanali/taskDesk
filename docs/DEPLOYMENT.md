@@ -76,3 +76,33 @@ review time. Hosted activation remains pending project selection and credentials
 - GET /ready is a public database readiness probe. It runs a minimal SELECT 1 through the same Prisma connection pool used by the API. HTTP 200 means the query succeeded; HTTP 503 means unavailable. It does not reveal credentials or database error details.
 - A successful /ready response does not establish that migrations, RLS, Supabase Auth, or task CRUD work. Verify those independently before accepting real data.
 - Monitor both probes separately; alert on repeated /ready failures while /health remains healthy. Avoid exposing either endpoint as proof of production readiness on its own.
+
+## Preview deployment budget (Vercel Hobby)
+
+Git-connected branches currently trigger Vercel preview deployments on push, even
+when changes affect only tests, documentation or backend logic already covered by
+GitHub Actions. A canceled preview can still consume deployment quota. The
+GitHub Actions CI is the primary validation gate: PostgreSQL 16 migrations,
+security audit, typecheck, tests and production builds run for pull requests.
+
+**Default contributor workflow:** commit locally as often as needed, but push
+one coherent, validated batch per PR milestone; prefer PRs with a single push
+when practical. Do not force-push, suppress CI or merge unvalidated changes.
+Avoid manual Vercel CLI deploys and retries while Hobby quota is exhausted.
+Reserve a preview for changes requiring hosted runtime validation (Vercel
+routing, environment-dependent auth, serverless behavior, browser integration).
+A Vercel READY build is not proof of database connectivity or working auth.
+
+**Optional project-level control (requires separate approval):** Vercel's Git
+settings support an Ignored Build Step command and, depending on plan and
+integration, branch/environment deployment controls. An ignored-build command
+must be reviewed against the production branch and all deployment triggers;
+never install a blanket skip that can suppress production releases. Confirm
+current product support and test on a disposable non-production project before
+changing project settings. Do not alter production Git settings automatically.
+
+**Evidence:** Vercel deployment history for `task-desk` includes multiple
+canceled preview records for successive commits on
+`fix/dashboard-request-races` and `fix/api-default-list-limit`, while
+`main` received its own production deployment. This confirms the cost of
+intermediate pushes; it does not prove that canceled builds are free.
