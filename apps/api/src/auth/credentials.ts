@@ -11,7 +11,7 @@ export function normalizeEmail(email: string): string {
 
 export async function registerUser(prisma: PrismaClient, email: string, password: string) {
  const normalized=normalizeEmail(email);
- if (normalized.length>320 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalized) || !validPassword(password)) {
+ if (normalized.length>320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) || !validPassword(password)) {
   throw new InvalidCredentials();
  }
  const passwordHash=await hashPassword(password);

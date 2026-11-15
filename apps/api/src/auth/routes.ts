@@ -58,7 +58,7 @@ export function createAuthRouter(prisma: PrismaClient) {
   }
  });
  router.get("/me",async(request,response)=>{
-  const match=/^Bearer ([^\\s]+)$/i.exec(request.get("Authorization") ?? "");
+  const match=/^Bearer ([^\s]+)$/i.exec(request.get("Authorization") ?? "");
   const identity=match?await verifySession(prisma,match[1]):null;
   if(!identity){response.status(401).json({error:"Sessão inválida."});return;}
   const user=await prisma.authUser.findUnique({where:{id:identity.id},select:{id:true,email:true}});
@@ -66,7 +66,7 @@ export function createAuthRouter(prisma: PrismaClient) {
   response.json({data:user});
  });
  router.post("/logout",async(request,response)=>{
-  const match=/^Bearer ([^\\s]+)$/i.exec(request.get("Authorization") ?? "");
+  const match=/^Bearer ([^\s]+)$/i.exec(request.get("Authorization") ?? "");
   if(match) await revokeSession(prisma,match[1]);
   response.status(204).end();
  });
