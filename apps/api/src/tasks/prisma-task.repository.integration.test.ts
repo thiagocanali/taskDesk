@@ -34,6 +34,24 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Prisma task persistence", () =>
   expect(await repository.listActivities(task.id)).toEqual([]);
   expect(await repository.update(task.id, {status:"COMPLETED"})).toBeNull();
  });
+ it("counts overdue and due-soon tasks using UTC day boundaries", async () => {
+  const ownerRepository = new PrismaTaskRepository(prisma, randomUUID());
+  const today = new Date();
+  today.setUTCHours(0,0,0,0);
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(yesterday.getUTCDate()-1);
+  const inSevenDays = new Date(today);
+  inSevenDays.setUTCDate(inSevenDays.getUTCDate()+7);
+  const afterWindow = new Date(today);
+  afterWindow.setUTCDate(afterWindow.getUTCDate()+8);
+  const overdue = await ownerRepository.create({title:"Overdue UTC",dueAt:yesterday});
+  const soon = await ownerRepository.create({title:"Soon UTC",dueAt:inSevenDays});
+  const later = await ownerRepository.create({title:"Later UTC",dueAt:afterWindow});
+  ids.push(overdue.id,soon.id,later.id);
+  expect(await ownerRepository.summary()).toMatchObject({total:3,overdue:1,dueSoon:1});
+  await ownerRepository.update(overdue.id,{status:"COMPLETED"});
+  expect(await ownerRepository.summary()).toMatchObject({total:3,completed:1,overdue:0,dueSoon:1});
+ });
  it("rolls back task updates when writing activity fails", async () => {
   const task = await create();
   // A real database trigger forces failure inside the transaction, not a mocked repository.
