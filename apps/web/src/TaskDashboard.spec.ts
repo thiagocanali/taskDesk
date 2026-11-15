@@ -64,7 +64,7 @@ describe("task dashboard with paginated API",()=>{
   const wrapper=await render();
   let resolvePage!: (value:Response)=>void;
   const pending=new Promise<Response>(resolve=>{resolvePage=resolve;});
-  const original=fetchMock.getMockImplementation()!;
+  const original=fetchMock.getMockImplementation() as (url:string,options?:RequestInit)=>Promise<Response>;
   fetchMock.mockImplementation((url:string,options?:RequestInit)=>{
     if(url.includes("page=2")) return pending;
     return original(url,options);
