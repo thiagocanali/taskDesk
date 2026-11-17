@@ -36,7 +36,8 @@ export function createTasksRouter(repository: TaskRepository): Router {
       response.status(200).json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
       return;
     }
-    response.status(200).json({ data: await repository.list(filters.data) });
+    // Keep the legacy response shape, but never execute an unbounded list query.
+    response.status(200).json({ data: await repository.list({ ...filters.data, page: 1, limit: 50 }) });
   });
 
   router.get("/summary", async (_request: Request, response: Response) => {
