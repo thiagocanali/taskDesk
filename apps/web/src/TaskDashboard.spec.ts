@@ -104,6 +104,15 @@ describe("task dashboard with paginated API",()=>{
   await wrapper.find(".feedback-error .text-button").trigger("click");await flushPromises();
   expect(wrapper.text()).toContain("Seu espaço ainda está vazio.");
  });
+ it("serializes calendar due dates as stable UTC noon regardless of browser timezone",async()=>{
+  const wrapper=await render();
+  await wrapper.find("#task-title").setValue("Prazo UTC");
+  await wrapper.find("#task-due").setValue("2026-11-12");
+  await wrapper.find("form.task-form").trigger("submit");await flushPromises();
+  const post=fetchMock.mock.calls.find(([,options])=>options?.method==="POST");
+  expect(post).toBeDefined();
+  expect(JSON.parse(post![1]!.body as string).dueAt).toBe("2026-11-12T12:00:00.000Z");
+ });
  it("creates, edits, changes status and deletes tasks with refreshed counts",async()=>{
   items=[makeTask("task-1","Original")];
   const wrapper=await render();
