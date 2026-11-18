@@ -75,9 +75,9 @@ const priorityLabels: Record<TaskPriority, string> = {
 const visibleTasks = computed(() => tasks.value);
 
 function localDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return year + "-" + month + "-" + day;
 }
 
@@ -86,7 +86,7 @@ function dueState(task: Task): "overdue" | "soon" | null {
   const dueDate = task.dueAt.slice(0, 10);
   const today = new Date();
   if (dueDate < localDateKey(today)) return "overdue";
-  const nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+  const nextWeek = new Date(new Date(today).setUTCDate(today.getUTCDate() + 7));
   return dueDate <= localDateKey(nextWeek) ? "soon" : null;
 }
 
@@ -192,7 +192,7 @@ async function createTask() {
     title: form.value.title.trim(),
     description: form.value.description.trim() || undefined,
     priority: form.value.priority,
-    dueAt: form.value.dueAt ? new Date(`${form.value.dueAt}T12:00:00`).toISOString() : undefined,
+    dueAt: form.value.dueAt ? new Date(`${form.value.dueAt}T12:00:00Z`).toISOString() : undefined,
   };
   try {
     await request<{ data: Task }>(taskUrl(), {
@@ -295,7 +295,7 @@ async function saveTask(task: Task) {
       description: editForm.value.description.trim() || null,
       priority: editForm.value.priority,
       dueAt: editForm.value.dueAt
-        ? new Date(`${editForm.value.dueAt}T12:00:00`).toISOString()
+        ? new Date(`${editForm.value.dueAt}T12:00:00Z`).toISOString()
         : null,
     };
     await request<{ data: Task }>(taskUrl(`/tasks/${encodeURIComponent(task.id)}`), {
