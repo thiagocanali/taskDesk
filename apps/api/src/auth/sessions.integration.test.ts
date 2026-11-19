@@ -24,4 +24,19 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("opaque auth sessions",()=>{
   expect(await verifySession(prisma,token,now)).toBeNull();
   await revokeSession(prisma,token,now);
  });
+ it("keeps independent sessions isolated and invalidates all sessions after user deletion",async()=>{
+  const user=await prisma.authUser.create({data:{email:`lifecycle-${randomUUID()}@example.test`,passwordHash:"test-only"}});
+  users.push(user.id);
+  const first=await createSession(prisma,user.id);
+  const second=await createSession(prisma,user.id);
+  expect(first.token).not.toBe(second.token);
+  expect(await verifySession(prisma,first.token)).toEqual({id:user.id});
+  expect(await verifySession(prisma,second.token)).toEqual({id:user.id});
+  await revokeSession(prisma,first.token);
+  expect(await verifySession(prisma,first.token)).toBeNull();
+  expect(await verifySession(prisma,second.token)).toEqual({id:user.id});
+  await prisma.authUser.delete({where:{id:user.id}});
+  expect(await verifySession(prisma,second.token)).toBeNull();
+  expect(await prisma.authSession.count({where:{userId:user.id}})).toBe(0);
+ });
 });
