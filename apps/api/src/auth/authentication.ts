@@ -19,7 +19,7 @@ export function createAuthenticator(env: NodeJS.ProcessEnv = process.env, prisma
   if (env.AUTH_MODE === "neon") {
     if (!prisma) return async () => { throw new AuthenticationUnavailable(); };
     return async request => {
-      const match = /^Bearer ([^\\s]+)$/i.exec(request.get("Authorization") ?? "");
+      const match = /^Bearer ([^\s]+)$/i.exec(request.get("Authorization") ?? "");
       if (!match) return null;
       return verifySession(prisma, match[1]);
     };
