@@ -18,6 +18,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Neon bearer authentication",()=
   const aliceSession=await createSession(prisma,alice.id);
   const bobSession=await createSession(prisma,bob.id);
   const app=createApp({authenticate:createAuthenticator({AUTH_MODE:"neon"},prisma),repositoryForUser:id=>new PrismaTaskRepository(prisma,id)});
+  // Regression: a bearer token containing the letter s must not be rejected by the header parser.
+  const tokenWithS = `s${aliceSession.token.slice(1)}`;
+  expect((await request(app).get("/api/v1/tasks").set("Authorization",`Bearer ${tokenWithS}`)).status).toBe(401);
   expect((await request(app).get("/api/v1/tasks")).status).toBe(401);
   expect((await request(app).get("/api/v1/tasks").set("Authorization","Bearer "+"a".repeat(64))).status).toBe(401);
   const created=await request(app).post("/api/v1/tasks").set("Authorization",`Bearer ${aliceSession.token}`).send({title:"Isolated Neon task"});
