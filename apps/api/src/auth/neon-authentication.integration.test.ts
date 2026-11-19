@@ -30,6 +30,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Neon bearer authentication",()=
    expect(bobList.status).toBe(200);
    expect(bobList.body.data).toEqual([]);
    expect((await request(app).get(`/api/v1/tasks/${id}`).set("Authorization",`Bearer ${bobSession.token}`)).status).toBe(404);
+   expect((await request(app).patch(`/api/v1/tasks/${id}`).set("Authorization",`Bearer ${bobSession.token}`).send({title:"Unauthorized edit"})).status).toBe(404);
+   expect((await request(app).delete(`/api/v1/tasks/${id}`).set("Authorization",`Bearer ${bobSession.token}`)).status).toBe(404);
+   expect((await request(app).get(`/api/v1/tasks/${id}`).set("Authorization",`Bearer ${aliceSession.token}`)).status).toBe(200);
    await revokeSession(prisma,aliceSession.token);
    expect((await request(app).get("/api/v1/tasks").set("Authorization",`Bearer ${aliceSession.token}`)).status).toBe(401);
   } finally { await prisma.task.deleteMany({where:{id}}); }
