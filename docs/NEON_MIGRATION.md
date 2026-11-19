@@ -57,3 +57,18 @@ Keep the original Supabase resources and original Vercel environment variables
 untouched until a validated cutover. Revert the application release and its
 corresponding environment configuration if hosted validation fails. Never
 blindly copy or discard user records.
+
+## Incremental auth implementation (PR #19)
+
+- Versioned AuthUser and AuthSession migrations are covered by disposable DB tests.
+- Auth session tokens are random 256-bit opaque values; SQL stores only SHA-256
+  hashes, expiry and revocation state.
+- Passwords use versioned salted scrypt hashes; raw passwords are never persisted.
+- The optional server-only `AUTH_MODE=neon` enables register/login/me/logout
+  endpoints. Existing Supabase mode remains the default.
+- HTTP registration and login are rate limited by client IP (in-process). This
+  is only a preliminary defense: deploy a shared rate limiter before scaling to
+  multiple serverless instances, and add account verification, recovery, and
+  session lifecycle controls before public release.
+- The browser still uses Supabase Auth. Do not enable Neon mode in production
+  until the frontend is updated and full end-to-end tests pass.

@@ -3,6 +3,7 @@ import { createPrismaClient } from "./database/prisma.js";
 import { createAuthenticator, AuthenticationUnavailable, type Authenticate } from "./auth/authentication.js";
 import { PrismaTaskRepository } from "./tasks/prisma-task.repository.js";
 import { createTasksRouter } from "./tasks/tasks.routes.js";
+import { createAuthRouter } from "./auth/routes.js";
 import type { TaskRepository } from "./tasks/task.types.js";
 
 export interface AppOptions {
@@ -15,7 +16,7 @@ export interface AppOptions {
 export function createApp(options: AppOptions = {}) {
   const app = express();
   let prisma: ReturnType<typeof createPrismaClient> | undefined;
-  const authenticate = options.authenticate ?? createAuthenticator();
+  const authenticate = options.authenticate ?? createAuthenticator(process.env, process.env.AUTH_MODE === "neon" ? (prisma ??= createPrismaClient()) : undefined);
   const repositoryForUser = options.repositoryForUser ?? ((userId: string) =>
     options.taskRepository ?? new PrismaTaskRepository(prisma ??= createPrismaClient(), userId));
 
@@ -44,6 +45,7 @@ export function createApp(options: AppOptions = {}) {
   app.get("/api/v1", (_request, response) => response.status(200).json({
     name: "taskDesk API", version: "v1", status: "available",
   }));
+  if (process.env.AUTH_MODE === "neon") app.use("/api/v1/auth",createAuthRouter(prisma ??= createPrismaClient()));
   app.use("/api/v1/tasks", async (request, response, next) => {
     const identity = await authenticate(request);
     if (!identity) {
