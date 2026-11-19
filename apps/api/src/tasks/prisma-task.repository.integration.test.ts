@@ -80,6 +80,20 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Prisma task persistence", () =>
    expect(list.body.data.map((task: {id:string})=>task.id)).toEqual(token==="alice"?[id]:[]);
    expect((await request(app).get(`/api/v1/tasks/${legacy.id}`).set("Authorization",`Bearer ${token}`)).status).toBe(404);
   }
+  // Search, sorting and global summary must never disclose another user's records.
+  const aliceSearch=await request(app).get("/api/v1/tasks?search=integration-&sort=newest&page=1&limit=10").set("Authorization","Bearer alice");
+  const bobSearch=await request(app).get("/api/v1/tasks?search=integration-&sort=newest&page=1&limit=10").set("Authorization","Bearer bob");
+  expect(aliceSearch.status).toBe(200);
+  expect(aliceSearch.body.pagination.total).toBe(1);
+  expect(aliceSearch.body.data.map((task:{id:string})=>task.id)).toEqual([id]);
+  expect(bobSearch.status).toBe(200);
+  expect(bobSearch.body.pagination.total).toBe(0);
+  expect(bobSearch.body.data).toEqual([]);
+  const aliceSummary=await request(app).get("/api/v1/tasks/summary").set("Authorization","Bearer alice");
+  const bobSummary=await request(app).get("/api/v1/tasks/summary").set("Authorization","Bearer bob");
+  expect(aliceSummary.body.data).toMatchObject({total:1,inProgress:0,waiting:0,completed:0});
+  expect(bobSummary.body.data).toMatchObject({total:0,inProgress:0,waiting:0,completed:0});
+  expect((await request(app).get("/api/v1/tasks/summary")).status).toBe(401);
   const alicePage=await request(app).get("/api/v1/tasks?page=1&limit=1").set("Authorization","Bearer alice");
   const bobPage=await request(app).get("/api/v1/tasks?page=1&limit=1").set("Authorization","Bearer bob");
   expect(alicePage.body.pagination).toEqual({page:1,limit:1,total:1,totalPages:1});
