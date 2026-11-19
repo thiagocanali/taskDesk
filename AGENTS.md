@@ -84,3 +84,15 @@ A task is complete only when:
 ## First implementation milestone
 
 Establish the workspace and development scripts, then create a minimal web landing/dashboard shell and an API health endpoint. Follow with the manual task workflow. Do not implement email integrations or AI in this milestone.
+
+## Autonomous development with protection
+
+- Plan and implement coherent batches of 5–10 related tasks; record completed, blocked, and deferred work in the existing PR.
+- Before opening a PR, search open PRs and branches for the same development front. Update the existing non-draft PR when appropriate; maintain at most one active PR per front unless a documented technical dependency requires otherwise.
+- Make focused conventional commits; avoid one PR per task, force pushes, unrelated changes, and unnecessary intermediate pushes.
+- Run available typecheck, tests, security audit, migration checks and builds. Fix failing CI and rerun it on the final head before considering integration. Never bypass required checks, approvals, or branch protections.
+- Prefer squash merge for completed, reviewed batches. Auto-merge may only be enabled when repository settings, required checks and review rules have been verified, and the change is low risk; do not enable it for drafts or incomplete work.
+- Authentication, database schemas/migrations, authorization/permissions, secrets and production changes require additional review, rollback planning and explicit validation. Do not automatically merge or deploy these changes.
+- Keep GitHub Actions as the default validation path. Batch pushes where practical to minimize Vercel previews; request a hosted preview only for changes that genuinely need it. Do not change Vercel production settings or trigger manual deploy retries to evade quotas.
+- If blocked, continue independent tasks in the batch without weakening safety gates. Report remaining blockers and the actual PR/CI state; do not claim background execution.
+- Do not modify branch protection, rulesets, or repository auto-merge settings without first auditing their effects and obtaining the necessary authorization.
