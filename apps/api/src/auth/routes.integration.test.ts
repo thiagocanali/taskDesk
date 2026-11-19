@@ -30,7 +30,10 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("auth HTTP routes",()=>{
   const me=await request(app).get("/api/v1/auth/me").set("Authorization",`Bearer ${token}`);
   expect(me.status).toBe(200);
   expect(me.body.data.email).toBe(email);
-  expect((await request(app).post("/api/v1/auth/logout").set("Authorization",`Bearer ${token}`)).status).toBe(204);
+  // Logout is idempotent and never consumes the login/register rate-limit budget.
+  for (let attempt=0;attempt<12;attempt++) {
+   expect((await request(app).post("/api/v1/auth/logout").set("Authorization",`Bearer ${token}`)).status).toBe(204);
+  }
   expect((await request(app).get("/api/v1/auth/me").set("Authorization",`Bearer ${token}`)).status).toBe(401);
  });
 });

@@ -11,7 +11,8 @@ export function createAuthRouter(prisma: PrismaClient) {
  const router=Router();
  const attempts=new Map<string,{count:number,until:number}>();
  router.use((request,response,next)=>{
-  if (request.method!=="POST") return next();
+  // Logout must remain available even after a client exhausts its sign-in budget.
+  if (request.method!=="POST" || (request.path!=="/login" && request.path!=="/register")) return next();
   const now=Date.now();
   if (attempts.size>=MAX_BUCKETS) for(const [key,value] of attempts) if(value.until<=now) attempts.delete(key);
   const key=request.ip ?? "unknown";
