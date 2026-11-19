@@ -18,13 +18,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("Neon bearer authentication",()=
   const aliceSession=await createSession(prisma,alice.id);
   const bobSession=await createSession(prisma,bob.id);
   const app=createApp({authenticate:createAuthenticator({AUTH_MODE:"neon"},prisma),repositoryForUser:id=>new PrismaTaskRepository(prisma,id)});
-  // Regression: a valid token containing s must be accepted by the bearer parser.
-  let tokenWithS = aliceSession.token;
-  for (let attempt = 0; attempt < 100 && !tokenWithS.includes("s"); attempt++) {
-   tokenWithS = (await createSession(prisma, alice.id)).token;
-  }
-  expect(tokenWithS).toContain("s");
-  expect((await request(app).get("/api/v1/tasks").set("Authorization",`Bearer ${tokenWithS}`)).status).toBe(200);
+  // Bearer scheme is case-insensitive; a real hexadecimal session token remains valid.
+  expect((await request(app).get("/api/v1/tasks").set("Authorization",`bEaReR ${aliceSession.token}`)).status).toBe(200);
   expect((await request(app).get("/api/v1/tasks")).status).toBe(401);
   expect((await request(app).get("/api/v1/tasks").set("Authorization","Bearer "+"a".repeat(64))).status).toBe(401);
   const created=await request(app).post("/api/v1/tasks").set("Authorization",`Bearer ${aliceSession.token}`).send({title:"Isolated Neon task"});
