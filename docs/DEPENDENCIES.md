@@ -57,3 +57,15 @@ no difference must be detected. Confirm the login/create/reload/logout/two-user
 flow in Chromium with actual API/PostgreSQL and synthetic authentication. Hosted
 Supabase activation is separately blocked by the account's free-project quota;
 no unrelated project should be paused without an explicit selection.
+# Effect transitive security override — 2026-11-20
+
+The production audit now reports GHSA-7589-6fvf-x4pw through
+`prisma -> @prisma/config -> effect@3.20.0`. The advisory identifies 3.22.1 as
+patched. The root manifest pins only `@prisma/config`'s effect dependency to
+3.22.1 via npm overrides and records it in the lockfile. Do not suppress the
+audit or remove the override until Prisma resolves to a patched version itself.
+
+Reference: https://github.com/advisories/GHSA-7589-6fvf-x4pw . This removes the
+affected dependency version; no claim is made that the application's HTTP routes
+were proven exploitable through Prisma configuration parsing. Revalidate Prisma
+generation, migrations, typecheck, tests and builds on dependency upgrades.

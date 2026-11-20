@@ -10,7 +10,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("auth HTTP routes",()=>{
  const ids:string[]=[];
  const app=express();
  app.use(express.json());
- app.use("/api/v1/auth",createAuthRouter(prisma));
+ app.use("/api/v1/auth",createAuthRouter(prisma,{allowRegistration:true}));
  afterAll(async()=>{await prisma.authUser.deleteMany({where:{id:{in:ids}}});await prisma.$disconnect();});
  it("registers, logs in, verifies identity and revokes session",async()=>{
   const email=`api-${randomUUID()}@example.test`;

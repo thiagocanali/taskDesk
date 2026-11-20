@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import type { Session } from "@supabase/supabase-js";
-import { authClient, localMode, neonMode, neonSignIn, neonSignOut, neonRegister, neonRestore, clearNeonSession } from "./auth";
+import { authClient, localMode, neonMode, registrationEnabled, neonSignIn, neonSignOut, neonRegister, neonRestore, clearNeonSession } from "./auth";
 import TaskDashboard from "./TaskDashboard.vue";
 
 const session = ref<Session | null>(null);
@@ -103,7 +103,8 @@ async function signOut() {
         <label class="field-label" for="login-password">Senha</label>
         <input id="login-password" v-model="password" type="password" autocomplete="current-password" required :disabled="saving" />
         <button class="primary-button" type="submit" :disabled="saving">{{ saving ? "Aguarde..." : registering ? "Cadastrar e entrar" : "Entrar" }}
-        <button v-if="neonMode" class="secondary-button" type="button" :disabled="saving" @click="registering = !registering">{{ registering ? "Já tenho conta" : "Criar conta" }}</button></button>
+        </button>
+        <button v-if="registrationEnabled" class="secondary-button" type="button" :disabled="saving" @click="registering = !registering">{{ registering ? "Já tenho conta" : "Criar conta" }}</button>
       </form>
     </section>
   </main>

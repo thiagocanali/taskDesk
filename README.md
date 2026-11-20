@@ -2,7 +2,7 @@
 
 Plataforma pessoal de organização de tarefas a partir de mensagens acionáveis, sem transformar todo e-mail em chamado.
 
-**Status atual:** CRUD, histórico e isolamento por usuário implementados, com login por Supabase Auth. A ativação hospedada depende de um projeto Supabase dedicado e das variáveis de ambiente. Gmail e Microsoft 365 ainda não estão conectados.
+**Status atual:** CRUD, histórico e isolamento por usuário implementados. O código suporta Supabase Auth e autenticação própria opcional (`AUTH_MODE=neon`); esse nome não comprova a existência de um banco Neon conectado. A ativação hospedada depende da escolha do provedor, banco dedicado, migrations e configuração validada. Gmail e Microsoft 365 ainda não estão conectados.
 
 ## Stack
 - Web: Vue 3, Vite, TypeScript e CSS puro.
