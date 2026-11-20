@@ -2,9 +2,9 @@
 
 ## Authentication and authorization
 
-- Supabase Auth email/password accounts are provisioned by the project operator.
-  No self-service signup, mailbox OAuth or email sending is implemented.
-- API requests require a Bearer token verified against Supabase Auth getUser.
+- In Supabase mode, email/password accounts are provisioned by the project operator.
+  No mailbox OAuth or email sending is implemented.
+- In Supabase mode, API requests require a Bearer token verified against Supabase Auth getUser.
   Missing/invalid tokens return 401; missing provider configuration or provider
   outages fail closed with 503. Health remains public. Anonymous Supabase accounts
   are rejected. No authorization decision uses user_metadata.
@@ -18,6 +18,35 @@
   only publishable keys, never database credentials or service_role/secret keys.
 
 ## Browser session
+
+### Independent authentication (`AUTH_MODE=neon`)
+
+This is application-managed authentication, not Neon Auth. It needs the
+AuthUser/AuthSession migrations on a dedicated PostgreSQL database. Selecting
+this mode does not migrate existing Supabase accounts or task ownership.
+
+HTTP registration is disabled unless the server has
+`AUTH_ALLOW_REGISTRATION=true`. The browser only offers registration when
+`VITE_AUTH_ALLOW_REGISTRATION=true`; the server flag is the security boundary.
+Enabling registration requires an operator decision. When enabled, duplicate
+emails still return 409 and email ownership is not verified. No password reset
+or email verification workflow is provided.
+
+Passwords use salted scrypt hashes. Login performs password verification even
+for an unknown account; this reduces an obvious work difference but does not
+guarantee constant response timing or prevent all account enumeration. Session
+tokens are random, stored only as SHA-256 hashes server-side, and rejected after
+seven days or explicit revocation. Revocation takes effect on the next check.
+
+The login/register limiter is an in-memory, per-instance control. It is not a
+distributed brute-force defense. Before a public serverless deployment, require
+a shared or platform-enforced limiter, verify the trusted client-IP path, and
+test rejection across instances. Never trust arbitrary forwarded IP headers.
+
+Recovery, expired-session cleanup and deletion/retention remain operational
+requirements. Do not treat passing unit tests as approval to enable this mode.
+
+### Supabase authentication
 
 Sessions use sessionStorage, bounded to the current tab. Dashboard state is
 unmounted on logout, user changes or API 401 responses. getSession is used only

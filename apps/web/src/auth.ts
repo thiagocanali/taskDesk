@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const neonMode = import.meta.env.VITE_AUTH_MODE === "neon";
+export const registrationEnabled = neonMode && import.meta.env.VITE_AUTH_ALLOW_REGISTRATION === "true";
 const neonTokenKey = "taskdesk:neon-token";
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 export function neonToken() { return window.sessionStorage.getItem(neonTokenKey); }

@@ -5,7 +5,7 @@ import App from "./App.vue";
 const mocks=vi.hoisted(()=>({
  onAuthStateChange:vi.fn(), signInWithPassword:vi.fn(), signOut:vi.fn(), unsubscribe:vi.fn(),
 }));
-vi.mock("./auth",()=>({localMode:false,neonMode:false,authClient:{auth:mocks}}));
+vi.mock("./auth",()=>({localMode:false,neonMode:false,registrationEnabled:false,authClient:{auth:mocks}}));
 vi.mock("./TaskDashboard.vue",()=>({default:{template:'<div data-testid="dashboard">Tarefas privadas</div>'}}));
 let notify: (event:string,session:unknown)=>void;
 const session={access_token:"token",user:{id:"user-1"}};

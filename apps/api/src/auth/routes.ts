@@ -7,7 +7,9 @@ const WINDOW_MS=15*60*1000;
 const MAX_ATTEMPTS=10;
 const MAX_BUCKETS=10000;
 
-export function createAuthRouter(prisma: PrismaClient) {
+export function createAuthRouter(prisma: PrismaClient, options = {
+ allowRegistration: process.env.AUTH_ALLOW_REGISTRATION === "true",
+}) {
  const router=Router();
  const attempts=new Map<string,{count:number,until:number}>();
  router.use((request,response,next)=>{
@@ -30,6 +32,9 @@ export function createAuthRouter(prisma: PrismaClient) {
   next();
  });
  router.post("/register",async(request,response)=>{
+  if (!options.allowRegistration) {
+   response.status(403).json({error:"O cadastro de contas está indisponível."});return;
+  }
   const {email,password}=request.body ?? {};
   if(typeof email!=="string" || typeof password!=="string"){
    response.status(400).json({error:"Dados inválidos."});return;
