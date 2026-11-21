@@ -7,7 +7,7 @@ Plataforma pessoal de organização de tarefas a partir de mensagens acionáveis
 ## Stack
 - Web: Vue 3, Vite, TypeScript e CSS puro.
 - API: Node.js, Express, TypeScript e Zod.
-- Banco: PostgreSQL 16 e Prisma 7.
+- Banco: PostgreSQL e Prisma 7; CI e validação de integração usam PostgreSQL 17.
 - Testes: Vitest e Supertest.
 
 ## Requisitos
@@ -36,7 +36,8 @@ npm run db:studio
 ```
 
 ## API de tarefas
-- `GET /api/v1/tasks` — listar, com filtros opcionais `status` e `priority`.
+- `GET /api/v1/tasks` — listar com `page`/`limit`, filtros `status`/`priority`, `search` e `sort`.
+- `GET /api/v1/tasks/summary` — resumo global das tarefas do usuário.
 - `POST /api/v1/tasks` — criar.
 - `GET /api/v1/tasks/:id` — consultar.
 - `PATCH /api/v1/tasks/:id` — atualizar.

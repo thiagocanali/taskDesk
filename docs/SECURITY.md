@@ -38,6 +38,13 @@ guarantee constant response timing or prevent all account enumeration. Session
 tokens are random, stored only as SHA-256 hashes server-side, and rejected after
 seven days or explicit revocation. Revocation takes effect on the next check.
 
+Independent logout clears the tab's token and private dashboard before awaiting
+the revocation request. The old bearer is captured only for that request. Auth
+HTTP requests have an eight-second timeout by default. A failed revocation leaves
+the browser signed out with a warning, but the server session may remain valid
+until revocation or expiry. Independent mode does not initialize or subscribe to
+Supabase Auth; do not mix provider identities.
+
 The login/register limiter is an in-memory, per-instance control. It is not a
 distributed brute-force defense. Before a public serverless deployment, require
 a shared or platform-enforced limiter, verify the trusted client-IP path, and

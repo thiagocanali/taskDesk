@@ -4,14 +4,14 @@
 - [x] Public repo, overview, agent instructions, product documentation.
 - [x] npm workspaces, Vue shell, Express health endpoint.
 - [x] CI workflow for type checks, tests, and builds.
-- [ ] Verify local setup and database startup.
+- [x] Verify disposable PostgreSQL startup and all versioned migrations during the resumption review (PostgreSQL 17).
 
 ## Phase 1 — Manual task MVP
 - [x] Define initial task/activity database models.
 - [x] Implement validated task CRUD API.
 - [x] Add route tests for create, list/filter, update, validation, missing records, and delete, including strict filters, invalid dates, empty updates, and missing activity history.
 - [x] Add local PostgreSQL Docker Compose service.
-- [x] Apply the initial Prisma migration to an ephemeral PostgreSQL 16 database in CI.
+- [x] Apply the initial Prisma migration to an ephemeral PostgreSQL database in CI (now PostgreSQL 17).
 - [x] Connect Vue dashboard to the API.
 - [x] Add task forms, status and priority filters, status controls, and activity history.
 - [x] Record field-level history with previous and new status/priority values; ignore no-op updates.
@@ -23,12 +23,14 @@
 - [x] Use locked CI installs and validate persistence against the CI database.
 
 ## Phase 2 — Online and secure
-- [ ] Choose hosting and managed PostgreSQL based on cost.
-- [ ] Configure HTTPS and environment variables.
+- [x] Configure Vercel hosting and inventory dedicated Supabase/Neon resources.
+- [ ] Approve the target authentication/database environment and cutover plan.
+- [x] Serve HTTPS on Vercel and configure Supabase auth variables.
+- [ ] Configure and validate server-only database connectivity; current production readiness returns 503.
 - [x] Implement Supabase Auth login, verified Bearer tokens and per-user ownership on all task/history operations.
 - [x] Quarantine legacy ownerless tasks and deny direct Data API reads with RLS.
 - [x] Prepare same-origin Vercel Function routing for the API.
-- [ ] Activate a dedicated Supabase project, run migrations and validate hosted login with synthetic accounts.
+- [ ] Activate and validate the approved hosted environment with synthetic accounts. Supabase taskDesk exists but is inactive; Neon exists without the application schema.
 - [ ] Add backups and monitoring.
 
 ## Phase 3 — Email providers
@@ -48,6 +50,26 @@
 - [ ] Track remaining moderate advisories in the Vue test formatting dependency chain.
 - [ ] Retention/deletion review, auditability, operational alerts, accessibility.
 
-## Pagination rollout (in progress)
+## Pagination and dashboard — implemented in main
 
-The task list API now accepts optional `page` (1-based, up to 100000) and `limit` (1–100, default 50 when paging). These parameters are validated at the API boundary and translated to Prisma `skip`/`take` with ownership and status/priority filters preserved. Existing requests without pagination parameters remain unchanged for compatibility with the current dashboard. **This is not the final scalability milestone:** the dashboard still loads the full list; next steps are frontend progressive loading, stable tie-break ordering, server-side counts and search, and then making bounded paging mandatory. Do not describe the current API as fully scalable.
+- [x] Bounded legacy listing (50 rows) and validated page/limit requests (limit 1–100).
+- [x] Vue progressive loading in pages of 25 and server-side status/priority filters.
+- [x] Owner-scoped case-insensitive title/description search and deterministic sorts.
+- [x] Server-side summary counts independent of the loaded page.
+- [x] Reject stale page responses after filter changes; normalize due-date handling to UTC.
+- [x] PostgreSQL tests verify search/summary cannot expose another user's tasks.
+
+This is implemented source behavior, not evidence of a functioning hosted database.
+
+## Independent authentication — implementation and release gates
+
+- [x] Merge additive AuthUser/AuthSession migration and revocable opaque sessions (PR #19).
+- [x] Implement scrypt credentials, optional HTTP auth and Vue session restoration/logout.
+- [ ] Integrate reviewed PR #24: closed registration, login hardening and local logout safety.
+- [ ] Enforce distributed/platform throttling with a reviewed trusted-IP boundary.
+- [ ] Implement email ownership verification, recovery and session-retention operations.
+- [ ] Apply migrations only to an approved isolated hosted target; validate two-user CRUD and logout.
+- [ ] Approve identity/ownership transition before changing production or retiring Supabase.
+
+See AUTH_MIGRATION_STATUS.md for checked commits, infrastructure evidence and
+remaining blockers. A passing CI run or READY deployment is not a hosted cutover.

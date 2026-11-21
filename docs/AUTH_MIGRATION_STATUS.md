@@ -1,31 +1,86 @@
 # TaskDesk — independent authentication worklog
 
-Updated 2026-11-15. Source of truth: PR #19 and GitHub Actions run for its latest head.
+Reviewed 2026-11-21 against source, PRs, CI and read-only infrastructure checks.
+The conversation available in this thread ends its earlier implementation at PR
+#4; subsequent progress is reconstructed from Git, PRs and checked-in documents.
+Commit messages and old checkboxes are not deployment evidence.
 
-| Priority | Work item | State | Evidence / next action |
-| --- | --- | --- | --- |
-| P0 | Add Prisma users/sessions schema | Implemented, pending PR integration | Versioned migration, PostgreSQL integration tests |
-| P0 | Hashed opaque sessions and revocation | Implemented, pending PR integration | Unit/integration tests and CI |
-| P0 | Salted password hashing and credential service | Implemented, pending PR integration | Unit/integration tests and CI |
-| P0 | Register/login/me/logout API | Implemented, pending PR integration | HTTP tests; opt-in AUTH_MODE=neon |
-| P0 | Vue login/registration/session/logout | Implemented, awaiting latest CI | Opt-in VITE_AUTH_MODE=neon, browser tests |
-| P0 | Validate latest PR #19 head | In progress | Check GitHub Actions run matching head SHA, fix failures |
-| P0 | Production-grade rate limiting | Pending | Current per-process IP limiter is insufficient across serverless instances; design shared store and tests |
-| P0 | Neon schema deployment | Blocked on validated migration and authorization review | Neon database is empty; do not apply migrations until compatibility/security reviewed |
-| P1 | Email verification and recovery | Pending | Add token lifecycle, delivery integration and tests |
-| P1 | Hosted end-to-end tests | Pending | Separate environment, valid credentials, and deployment authorization |
-| P1 | Retire Supabase auth | Blocked | Only after full independent auth verification and authorized cutover |
+## Resume baseline
 
-## Safe configuration
+- main: 30d30c5 (2026-11-19), protected autonomous batches and CI concurrency.
+- dd7cf27 / PR #19: independent authentication implementation is already merged.
+- 7badeee / PR #22: search/summary ownership regression tests are merged.
+- e2faa95 / PR #21 and fc025ee / PR #20: stale-pagination protection and UTC due
+  dates are merged. Search, sorting, bounded lists and server summaries predate them.
+- PR #24 is the active, unmerged authentication hardening front. Its reviewed
+  starting head ab4bd94 had passing GitHub Actions on the matching SHA. Continue
+  this PR rather than recreate its registration/login changes in another branch.
 
-Keep Supabase as default; opt into Neon auth in a separate development environment only.
-Never commit credentials, enable Neon auth in production, merge protected branches,
-or deploy Vercel without explicit approval. GitHub Actions is the primary gate.
+## Status by delivery boundary
 
-## Known risks
+| Work item | Source state | Hosted state / next action |
+| --- | --- | --- |
+| Prisma AuthUser/AuthSession schema | Merged in PR #19; migration and constraint tests exist | Neon has none of the application tables or Prisma migration history |
+| Salted scrypt credentials and hashed opaque sessions | Merged, expiry/revocation/cascade tests exist | Not activated; this is application-managed auth, not Neon Auth |
+| Register/login/me/logout and Vue flow | Merged, opt-in AUTH_MODE=neon / VITE_AUTH_MODE=neon | Production still selects Supabase |
+| Closed registration and equalized unknown-account password work | Implemented in PR #24, not main | Requires additional authentication review; not a constant-timing guarantee |
+| Immediate local logout and provider isolation | Added to PR #24 during resumption | Local tests cover slow/failed revocation and removal of private UI |
+| Distributed/platform rate limiting and trusted IP boundary | Pending | Existing limiter is per process and is insufficient across serverless workers |
+| Email verification and recovery | Pending | verifiedAt exists but no ownership verification/recovery flow is implemented |
+| Hosted migration / two-user verification | Blocked | Need an approved isolated target, credentials, migrations and review |
+| Supabase retirement / identity cutover | Not performed | Requires an explicit identity and task-ownership plan |
 
-- Registration currently permits unverified accounts; verification/recovery remain unfinished.
-- Browser stores a bearer token in sessionStorage; consider hardened HttpOnly cookies
-  with CSRF protection for public release. Do not claim this flow is production-ready.
-- In-memory throttling does not enforce global rate limits across serverless workers.
-- Existing Supabase users are not migrated; clean re-registration is expected.
+## Infrastructure evidence (2026-11-21)
+
+- Vercel production serves main 30d30c5, deployment marked READY. Actual HTTP
+  checks returned /health 200, /ready 503, and anonymous /api/v1/tasks 401.
+  READY and liveness do not establish working database access or authenticated CRUD.
+- Listed production variables select Supabase and include its public URL/key;
+  DATABASE_URL is absent. No preview auth/database variables were listed.
+- Supabase taskDesk eztgqelzooznmckehbex exists in sa-east-1 and is INACTIVE.
+  The old statement that it had never been created is historical, not current.
+- Neon taskdesk polished-voice-01104596 exists on PostgreSQL 17 in aws-sa-east-1.
+  A read-only to_regclass check on branch br-small-unit-b6cyf068 / database taskdesk
+  returned NULL for Task, AuthUser, AuthSession and _prisma_migrations. No schema
+  deployment or data migration is inferred from the existence of the project.
+
+## Resumption validation and next steps
+
+The local batch applied all three existing migrations to disposable PostgreSQL
+17. Typecheck, builds, production audit (zero reported vulnerabilities), and all
+72 tests passed: 52 API and 20 Vue. New regressions first reproduced the logout
+and cross-provider subscription issues, then passed after the fix. Final-head
+CI and browser-flow evidence are recorded in PR #24 to avoid confusing an old
+passing run with the current branch head.
+
+Local Chromium used two synthetic accounts with the actual independent auth API
+and disposable PostgreSQL 17: login, create, persisted reload, normal logout
+revocation, cross-user 404 and failed-network logout all passed. The failed
+revocation left the server token valid as expected, while clearing browser
+storage and private views and showing a warning. No Supabase requests or page
+errors occurred. This is local evidence, not a hosted activation.
+
+Next: finish reviewing the complete PR #24 batch and its final-head CI. Do not
+merge auth changes automatically. Then address shared/platform throttling and
+trusted client IPs, verification/recovery, and an approved isolated hosted flow.
+Do not enable independent auth publicly simply because local tests passed.
+
+## Safe configuration and rollback
+
+Keep Supabase as the default. Independent registration stays closed unless both
+server and browser flags are explicitly enabled; the server flag is the authority.
+No hosted environment, database schema, account or production setting was changed
+by this resumption. Existing identities, records and sessions are preserved.
+
+Independent logout removes the local token and private dashboard immediately.
+The captured old token is sent only for revocation; auth HTTP requests time out
+after eight seconds unless a caller provides its own abort signal. If revocation
+fails, the login screen warns that local sign-out succeeded but the server could
+not confirm it. The server session can remain valid until revoked or expired.
+Supabase session events are not subscribed to when independent mode is selected.
+
+Retain the hardened release with registration flags false/unset if rollout is
+postponed; reverting to pre-hardening code would reopen default registration.
+No hosted rollback operation is needed for a local-only batch. Do not delete
+accounts, reassign tasks, pause projects, apply hosted migrations or change
+production providers as an implicit continuation of this review.

@@ -1,3 +1,7 @@
+> Current status: see AUTH_MIGRATION_STATUS.md (reviewed 2026-11-21).
+> The implementation inventory below reflects the verified source; historical
+> migration plans must not be mistaken for a completed hosted cutover.
+
 # Neon migration — taskDesk
 
 ## Current state
@@ -12,12 +16,12 @@ been performed. Do not assume that Neon schema or authentication is ready.
 | Component | Current dependency | Migration requirement |
 | --- | --- | --- |
 | Database | Prisma 7, PostgreSQL adapter | Keep Prisma; run versioned migrations against Neon |
-| API auth | `apps/api/src/auth/authentication.ts` | Replace Supabase `getUser` with server-validated sessions |
-| Browser auth | `apps/web/src/auth.ts`, `App.vue` | Replace Supabase client and login/session/logout UI |
+| API auth | `apps/api/src/auth/authentication.ts` | Optional server-validated opaque sessions implemented; Supabase remains default |
+| Browser auth | `apps/web/src/auth.ts`, `App.vue` | Optional independent flow implemented; preserve existing Supabase mode |
 | Package dependencies | `@supabase/supabase-js` in both workspaces | Remove after replacement and lockfile regeneration |
 | Task ownership | `Task.ownerId` UUID, repository owner filters | Bind to new auth user UUID; test cross-user access |
 | Task history | `TaskActivity` via parent task | Preserve scoped access and cascading deletes |
-| Database migrations | Prisma migrations `init` and `task_ownership` | Apply to clean Neon DB, inspect RLS/owner privileges |
+| Database migrations | Prisma migrations `init`, `task_ownership` and `independent_auth` | Apply to clean Neon DB, inspect RLS/owner privileges |
 | Hosting | Vercel API + Vite web | Configure secret server-only Neon URL per environment |
 | CI | GitHub Actions PostgreSQL service | Validate against PostgreSQL 17; use isolated ephemeral DB |
 | Storage/Realtime/Edge | No application use identified in audited source | No replacement service required for current MVP |
@@ -47,7 +51,7 @@ been performed. Do not assume that Neon schema or authentication is ready.
 ## Blockers
 
 - Hosted Neon schema has not yet been migrated with Prisma migration history.
-- Supabase Auth is still used; independent auth implementation and tests remain.
+- Supabase remains selected in production. Independent auth and tests are implemented in main; PR #24 hardening is pending integration and public-release gates remain.
 - Production Vercel environment has not been changed. Do not publish a cutover
   until migrations, authentication and API integration are validated.
 
@@ -70,5 +74,4 @@ blindly copy or discard user records.
   is only a preliminary defense: deploy a shared rate limiter before scaling to
   multiple serverless instances, and add account verification, recovery, and
   session lifecycle controls before public release.
-- The browser still uses Supabase Auth. Do not enable Neon mode in production
-  until the frontend is updated and full end-to-end tests pass.
+- The browser has an optional independent flow selected by VITE_AUTH_MODE=neon. It is application-managed auth, not Neon Auth. Do not enable it in production before the hosted flow and remaining release gates pass.
