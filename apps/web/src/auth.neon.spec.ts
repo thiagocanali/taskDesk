@@ -26,4 +26,19 @@ describe("Neon browser auth",()=>{
   expect(neonToken()).toBeNull();
   clearNeonSession();
  });
+ it("clears the local token before logout completes, preserving the bearer for revocation",async()=>{
+  const token="b".repeat(64);
+  window.sessionStorage.setItem("taskdesk:neon-token",token);
+  let rejectLogout!: (reason:Error)=>void;
+  const fetchMock=vi.spyOn(globalThis,"fetch").mockImplementation(()=>new Promise((_resolve,reject)=>{rejectLogout=reject;}));
+  const operation=neonSignOut();
+  const result=operation.catch(error=>error);
+  const tokenWhilePending=neonToken();
+  rejectLogout(new Error("synthetic network failure"));
+  expect(await result).toBeInstanceOf(Error);
+  expect(tokenWhilePending).toBeNull();
+  expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({Authorization:`Bearer ${token}`});
+  expect(neonToken()).toBeNull();
+ });
+
 });

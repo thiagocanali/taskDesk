@@ -24,7 +24,7 @@ function sessionExpired() {
 onMounted(() => {
   if (neonMode) void neonRestore().then(user => {neonUser.value=user;loading.value=false;}).catch(()=>{loading.value=false;});
   window.addEventListener("taskdesk:unauthorized", sessionExpired);
-  if (!authClient) return;
+  if (neonMode || !authClient) return;
   const { data } = authClient.auth.onAuthStateChange((_event, nextSession) => {
     session.value = nextSession;
     loading.value = false;
@@ -62,7 +62,11 @@ async function signOut() {
   saving.value = true;
   error.value = "";
   try {
-    if (neonMode) { await neonSignOut(); neonUser.value=null; }
+    if (neonMode) {
+      neonUser.value=null;
+      password.value="";
+      await neonSignOut();
+    }
     else {
       const result = await authClient!.auth.signOut({scope: "local"});
       if (result.error) throw result.error;
@@ -70,7 +74,9 @@ async function signOut() {
     }
     password.value = "";
   } catch {
-    error.value = "Não foi possível sair. Tente novamente.";
+    error.value = neonMode
+      ? "Você saiu deste dispositivo. Não foi possível confirmar o encerramento da sessão no servidor."
+      : "Não foi possível sair. Tente novamente.";
   } finally {
     saving.value = false;
   }

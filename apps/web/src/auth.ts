@@ -11,7 +11,7 @@ export function clearNeonSession() { window.sessionStorage.removeItem(neonTokenK
 export async function neonRequest<T>(path: string, options?: RequestInit): Promise<T> {
  const token = neonToken();
  const response = await fetch(`${apiBase}/api/v1/auth${path}`,{
-  ...options, headers:{"Content-Type":"application/json",...options?.headers,...(token?{Authorization:`Bearer ${token}`}:{})}
+  ...options, signal:options?.signal ?? AbortSignal.timeout(8000), headers:{"Content-Type":"application/json",...options?.headers,...(token?{Authorization:`Bearer ${token}`}:{})}
  });
  if (!response.ok) throw new Error(response.status===429?"Muitas tentativas. Aguarde e tente novamente.":"Não foi possível autenticar.");
  return response.status===204?undefined as T:response.json() as Promise<T>;
@@ -30,10 +30,13 @@ export async function neonRestore() {
  catch { clearNeonSession(); return null; }
 }
 export async function neonSignOut() {
- try { await neonRequest("/logout",{method:"POST"}); } finally { clearNeonSession(); }
+ const token = neonToken();
+ clearNeonSession();
+ // The captured token is only used to revoke the session being closed.
+ await neonRequest("/logout",{method:"POST",headers:token?{Authorization:`Bearer ${token}`}:{}});
 }
 export const localMode = import.meta.env.DEV && import.meta.env.VITE_AUTH_MODE === "local";
-export const authClient = url && key?.startsWith("sb_publishable_") ? createClient(url, key, {
+export const authClient = !neonMode && url && key?.startsWith("sb_publishable_") ? createClient(url, key, {
   auth: {
     storage: window.sessionStorage,
     persistSession: true,
