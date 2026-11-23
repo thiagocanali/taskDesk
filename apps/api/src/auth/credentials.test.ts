@@ -19,6 +19,14 @@ describe("login credential work", () => {
   expect(verifyPassword).toHaveBeenCalledExactlyOnceWith("a-long-password",expect.stringMatching(/^scrypt-v1:[a-f0-9]{32}:[a-f0-9]{128}$/));
   expect(createSession).not.toHaveBeenCalled();
  });
+ it("normalizes case and surrounding whitespace before looking up credentials", async () => {
+  const findUnique = vi.fn().mockResolvedValue(null);
+  const prisma = {authUser:{findUnique}} as unknown as PrismaClient;
+  vi.mocked(verifyPassword).mockResolvedValue(false);
+  await expect(signInUser(prisma,"  USER@Example.TEST  ","a-long-password")).rejects.toBeInstanceOf(InvalidCredentials);
+  expect(findUnique).toHaveBeenCalledExactlyOnceWith({where:{email:"user@example.test"}});
+  expect(createSession).not.toHaveBeenCalled();
+ });
  it("rejects the wrong password without issuing a session", async () => {
   const prisma = {authUser:{findUnique:vi.fn().mockResolvedValue({id:"u1",passwordHash:"stored-hash"})}} as unknown as PrismaClient;
   vi.mocked(verifyPassword).mockResolvedValue(false);
