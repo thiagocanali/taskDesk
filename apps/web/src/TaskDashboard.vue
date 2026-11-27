@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { accessToken } from "./auth";
-import { computed, onMounted, ref, watch } from "vue";
+import { apiRequest as request } from "./services/api";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 type TaskStatus = "NEW" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
@@ -38,6 +38,8 @@ const filteredTotal = ref(0);
 const loadingMore = ref(false);
 let loadGeneration = 0;
 let loadMoreGeneration = 0;
+let loadController: AbortController | null = null;
+let moreController: AbortController | null = null;
 const loading = ref(true);
 const saving = ref(false);
 const errorMessage = ref("");
@@ -106,24 +108,13 @@ function taskUrl(path = "/tasks") {
   return `${apiBase}/api/v1${path}`;
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const token = await accessToken();
-  const response = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-  });
-  if (response.status === 401) window.dispatchEvent(new Event("taskdesk:unauthorized"));
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(body?.error ?? "Não foi possível concluir a operação.");
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-}
-
 async function loadTasks() {
   const generation = ++loadGeneration;
   ++loadMoreGeneration;
+  loadController?.abort();
+  moreController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
   loadingMore.value = false;
   loading.value = true;
   errorMessage.value = "";
@@ -139,8 +130,8 @@ async function loadTasks() {
     if (searchTerm.value) query.set("search", searchTerm.value);
     query.set("sort", sortOrder.value);
     const [result, overview] = await Promise.all([
-      request<TaskPage>(taskUrl() + "?" + query.toString()),
-      request<{data:TaskSummary}>(taskUrl("/tasks/summary")),
+      request<TaskPage>(taskUrl() + "?" + query.toString(), {signal:controller.signal}),
+      request<{data:TaskSummary}>(taskUrl("/tasks/summary"), {signal:controller.signal}),
     ]);
     if (generation !== loadGeneration) return;
     tasks.value = result.data;
@@ -156,6 +147,8 @@ async function loadTasks() {
     retryLoadAvailable.value = true;
   } finally {
     if (generation === loadGeneration) loading.value = false;
+    controller.abort();
+    if (loadController === controller) loadController = null;
   }
 }
 
@@ -163,6 +156,8 @@ async function loadMoreTasks() {
   if (loading.value || loadingMore.value || tasks.value.length >= filteredTotal.value) return;
   const generation = loadGeneration;
   const moreGeneration = ++loadMoreGeneration;
+  const controller = new AbortController();
+  moreController = controller;
   loadingMore.value = true;
   errorMessage.value = "";
   try {
@@ -172,7 +167,7 @@ async function loadMoreTasks() {
     if (priorityFilter.value !== "ALL") query.set("priority", priorityFilter.value);
     if (searchTerm.value) query.set("search", searchTerm.value);
     query.set("sort", sortOrder.value);
-    const result = await request<TaskPage>(taskUrl() + "?" + query.toString());
+    const result = await request<TaskPage>(taskUrl() + "?" + query.toString(), {signal:controller.signal});
     if (generation !== loadGeneration || moreGeneration !== loadMoreGeneration) return;
     const seen = new Set(tasks.value.map(task => task.id));
     tasks.value = [...tasks.value, ...result.data.filter(task => !seen.has(task.id))];
@@ -182,10 +177,18 @@ async function loadMoreTasks() {
     if (generation === loadGeneration && moreGeneration === loadMoreGeneration) errorMessage.value = error instanceof Error ? error.message : "Falha ao carregar mais tarefas.";
   } finally {
     if (moreGeneration === loadMoreGeneration) loadingMore.value = false;
+    controller.abort();
+    if (moreController === controller) moreController = null;
   }
 }
 
 watch([statusFilter, priorityFilter, searchTerm, sortOrder], () => { void loadTasks(); });
+onUnmounted(() => {
+  ++loadGeneration;
+  ++loadMoreGeneration;
+  loadController?.abort();
+  moreController?.abort();
+});
 
 async function createTask() {
   if (!form.value.title.trim()) return;

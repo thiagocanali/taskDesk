@@ -6,7 +6,7 @@ type Task = { id:string;title:string;description:string|null;status:"NEW"|"IN_PR
 function makeTask(id:string,title:string,overrides:Partial<Task>={}):Task {
  return {id,title,description:null,status:"NEW",priority:"NORMAL",dueAt:null,origin:null,isDemo:false,createdAt:"2026-11-01T12:00:00.000Z",updatedAt:"2026-11-01T12:00:00.000Z",...overrides};
 }
-function response(data:unknown,status=200):Response {return {ok:status>=200&&status<300,status,json:async()=>data} as Response;}
+function response(data:unknown,status=200):Response {return new Response(status===204?null:JSON.stringify(data),{status,headers:{"Content-Type":"application/json"}});}
 let items:Task[];
 let fetchMock:ReturnType<typeof vi.fn>;
 let failure:string|null;
@@ -95,6 +95,22 @@ describe("task dashboard with paginated API",()=>{
   expect(wrapper.text()).not.toContain("Normal em andamento");
   expect(listRequests.at(-1)).toContain("status=IN_PROGRESS");
   expect(listRequests.at(-1)).toContain("priority=HIGH");
+ });
+ it("aborts pending reads on filter changes and component disposal",async()=>{
+  const signals:AbortSignal[]=[];
+  fetchMock.mockImplementation((_url:string,options?:RequestInit)=>{
+   signals.push(options!.signal as AbortSignal);
+   return new Promise(()=>{});
+  });
+  const wrapper=await render();
+  const initial=signals.slice();
+  await wrapper.find("#status-filter").setValue("COMPLETED");await flushPromises();
+  expect(initial.every(signal=>signal.aborted)).toBe(true);
+  const current=signals.slice(initial.length);
+  expect(current.length).toBeGreaterThan(0);
+  expect(current.every(signal=>!signal.aborted)).toBe(true);
+  wrapper.unmount();await flushPromises();
+  expect(current.every(signal=>signal.aborted)).toBe(true);
  });
  it("searches title and description and preserves search and sort while loading more",async()=>{
   items=Array.from({length:29},(_,i)=>makeTask("task-"+i,"Projeto "+i,{description:i<27?"Revisar contrato":"Sem correspondência",createdAt:new Date(Date.UTC(2026,10,1,0,0,i)).toISOString()}));

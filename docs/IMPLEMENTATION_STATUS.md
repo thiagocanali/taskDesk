@@ -40,7 +40,7 @@ not yet integrated into main.
 
 ## Next batch after review
 1. IN_REVIEW: request IDs, structured metadata-only diagnostics and response-contract tests in stacked branch feat/api-request-diagnostics; see API_OBSERVABILITY.md (TD-200–204).
-2. Add API timeouts/cancellation and extract a tested frontend API client.
+2. IN_REVIEW in the same diagnostics branch: extracted API client, bounded requests, typed correlation errors and cancellation of obsolete reads; see API_OBSERVABILITY.md (TD-205–209).
 3. Write the cookie/session ADR before changing storage or transport.
 4. Perform a rendered responsive/keyboard audit and establish design tokens.
 5. Add browser E2E to CI with a disposable database, without paid services.

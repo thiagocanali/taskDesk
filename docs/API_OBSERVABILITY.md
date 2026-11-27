@@ -63,3 +63,29 @@ the authentication/schema review of its base. No duplicate security patch is mad
 Final-head CI evidence is recorded in the PR. No lint script exists. Database
 integration runs only on a disposable database. Next action: review before
 integration; add OpenAPI and real operational baselines in a later batch.
+
+## Client transport follow-up — 2026-11-27
+
+TaskDashboard now delegates transport to services/api.ts. It preserves existing
+payloads, selected-provider Bearer handling and unauthorized events. ApiError
+retains HTTP status and a bounded server request ID for diagnosis; the user-facing
+message does not include that metadata. No token, payload or URL is logged.
+
+The default fifteen-second deadline covers credential retrieval, fetch and JSON
+decoding. Caller cancellation is separate from timeout. Superseded list/summary
+and pagination requests are canceled on filter changes and disposal; existing
+generation guards remain necessary when a transport ignores cancellation.
+Canceled requests cannot dispatch an unauthorized event from a late 401 response.
+
+There are no automatic retries, especially for mutations: the server may commit
+after the client stops waiting. Users must refresh persisted state before retrying.
+Canceling a client request does not roll back a database transaction. The current
+timeout is not a measured SLA or a guarantee of server availability.
+
+| ID | Phase / priority | Task | State | Acceptance / files |
+| --- | --- | --- | --- | --- |
+| TD-205 | 01 / P1 | Extract reusable API client | IN_REVIEW | Existing payloads and auth behavior; services/api.ts |
+| TD-206 | 20 / P2 | Typed errors and request-ID correlation | IN_REVIEW | Safe messages, status/correlation metadata, 204/invalid JSON handling |
+| TD-207 | 01 / P1 | Bound requests without automatic retries | IN_REVIEW | Timeout while awaiting credentials or mutation response; no late fetch |
+| TD-208 | 01 / P1 | Cancel obsolete dashboard reads | IN_REVIEW | Filter/unmount cancellation plus retained generation guards |
+| TD-209 | 18 / P0 | Regression tests and diagnosis guidance | IN_REVIEW | Transport/unit and dashboard interaction coverage; final-head CI |
