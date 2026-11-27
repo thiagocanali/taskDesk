@@ -39,7 +39,7 @@ not yet integrated into main.
 | TD-111 | P1 | Retention and restoration | Operational design and review | Cleanup attempts/sessions safely; restore drill with disposable data |
 
 ## Next batch after review
-1. Add request IDs, structured metadata-only diagnostics and response-contract tests.
+1. IN_REVIEW: request IDs, structured metadata-only diagnostics and response-contract tests in stacked branch feat/api-request-diagnostics; see API_OBSERVABILITY.md (TD-200–204).
 2. Add API timeouts/cancellation and extract a tested frontend API client.
 3. Write the cookie/session ADR before changing storage or transport.
 4. Perform a rendered responsive/keyboard audit and establish design tokens.
