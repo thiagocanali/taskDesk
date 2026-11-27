@@ -89,7 +89,7 @@ production providers as an implicit continuation of this review.
 
 Prepared against PR #24 head 27d048c. A local snapshot's Git tree was verified
 identical to that head before editing; unrelated work in another checkout was
-preserved. This follow-up has not been pushed, merged or deployed.
+preserved. This follow-up was subsequently published as 3d7c0ea in PR #24; it has not been merged or deployed.
 
 Restoration clears the captured token only after /me confirms HTTP 401. Network
 errors, timeouts, throttling and other HTTP failures preserve it and show a
@@ -107,3 +107,11 @@ The API and database schema were not changed. The existing GitHub Actions check
 on 27d048c passed, but does not validate this unpublished follow-up. A new CI run
 must follow authorized publication to PR #24 before this batch is considered
 fully validated. Production settings and hosted databases remain untouched.
+
+## Master-plan batch — 2026-11-26
+
+Preserved the newer 3d7c0ea session restoration implementation and its tests.
+This batch adds the reviewed AuthAttempt schema proposal and per-account
+PostgreSQL budgets, failure-closed routing and concurrency/expiry/RLS tests.
+See AUDIT.md, IMPLEMENTATION_STATUS.md and adr/0001-shared-account-budgets.md.
+No hosted schema, identity provider or production configuration was changed.

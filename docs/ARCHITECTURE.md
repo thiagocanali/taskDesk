@@ -29,3 +29,45 @@ Logout removes local credentials and private views before awaiting revocation;
 a network failure is reported without promising server-side revocation.
 Source implementation, PR integration and hosted activation are tracked separately
 in AUTH_MIGRATION_STATUS.md.
+
+## Shared account budgets (proposed in PR #24)
+
+AuthAttempt is a server-only, RLS-enabled PostgreSQL table with a derived account
+key, bounded counter and expiry index. An atomic INSERT ... ON CONFLICT update
+admits ten requests per account/window across instances. Database time determines
+expiration. A missing migration/store failure denies authentication with 503.
+No raw email, password, IP or bearer is stored in this table. Hashes of known
+emails remain personal data and are not anonymization.
+
+This is a layered account throttle, not complete platform rate limiting or DDoS
+protection. See SECURITY.md and adr/0001-shared-account-budgets.md.
+
+```mermaid
+flowchart LR
+  Browser[Vue client] --> API[Express boundary]
+  API --> Auth{Selected identity}
+  Auth --> Supabase[Supabase getUser]
+  Auth --> Budget[PostgreSQL attempt budget]
+  Budget --> Credentials[Application credentials and sessions]
+  Supabase --> Owner[Verified user UUID]
+  Credentials --> Owner
+  Owner --> Repo[Owner-scoped task repository]
+  Repo --> DB[(PostgreSQL via Prisma pool)]
+  Repo --> History[Atomic activity history]
+```
+
+```mermaid
+flowchart LR
+  PR[Reviewed branch] --> CI[GitHub Actions]
+  CI --> Install[Locked install and audit]
+  Install --> Migrate[Disposable PostgreSQL migrations]
+  Migrate --> Check[Types and regression tests]
+  Check --> Build[API and web builds]
+  Build --> Review[Additional auth/schema review]
+  Review --> Release[Separately authorized production activation]
+```
+
+Browser restoration keeps a token during transient network/provider failures,
+but never renders private views without successful identity restoration.
+A definitive 401 clears the independent token. Revocation/logout semantics
+remain documented in SECURITY.md; no provider cutover is implied.

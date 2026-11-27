@@ -73,3 +73,37 @@ This is implemented source behavior, not evidence of a functioning hosted databa
 
 See AUTH_MIGRATION_STATUS.md for checked commits, infrastructure evidence and
 remaining blockers. A passing CI run or READY deployment is not a hosted cutover.
+
+## Master-plan alignment — 2026-11-26
+
+The earlier phase numbers above are historical milestones. The following mapping
+uses the user's current master-plan numbering; implemented entries above are not
+recreated. Detailed states/acceptance live in IMPLEMENTATION_STATUS.md.
+
+| Phase | Priority | Scope | Current boundary / next action |
+| --- | --- | --- | --- |
+| 00 | P0 | Audit | Source/infrastructure audit in AUDIT.md; rendered visual audit pending |
+| 01 | P0 | Stability/architecture | Preserve stack; next request IDs, errors, API client, graceful shutdown, OpenAPI |
+| 02 | P0 | Auth/security/Neon | PR #24 hardening plus shared budgets; hosted cutover separately blocked |
+| 03 | P1 | UX/design system | Audit rendered views first; tokens, themes, responsive layout; no dead modules |
+| 04 | P1 | Task core | Existing CRUD/search/history/paging preserved; next archive/restore and safe task evolution |
+| 05 | P1 | Operational dashboard | Counts exist; next today/focus explanations based on persisted tasks |
+| 06 | P1 | Projects/areas/tags | Backlog; owner-scoped additive model and optional organization |
+| 07 | P2 | Manual inbox | Backlog; explicit conversion/linking and duplicate prevention |
+| 08 | P2 | Gmail/Microsoft | Gated by foundation, privacy and separate integration authorization |
+| 09 | P2 | Classification | Gated; deterministic baseline, structured outputs and human review |
+| 10 | P2 | Follow-ups | Backlog; manual persisted follow-ups before provider-based detection |
+| 11 | P3 | Calendar/planning | Backlog; shared task data and explicit timezone/date semantics |
+| 12 | P3 | Notifications/automation | Backlog; idempotent execution, preferences and no sensitive external actions |
+| 13 | P3 | Optional assistant | Backlog; authorized real data, no invented facts or direct model writes |
+| 14 | P3 | Global search/focus | Task search exists; other entities wait for real models |
+| 15 | P2 | Settings/privacy | Backlog; session management, export/retention and deletion policy |
+| 16 | P3 | Mobile/PWA/accessibility | Responsive CSS exists; measure keyboard/contrast/viewports before claims; no sensitive offline cache |
+| 17 | P2 | Performance | Bounded requests/pool exist; measure workloads before adding indexes/cache |
+| 18 | P0 | Quality | CI migrations/tests/types/build/audit; add reproducible browser E2E |
+| 19 | P0 | Governance | Existing protected-batch workflow retained; one PR per active front |
+| 20 | P2 | Observability | Health/readiness exist; next privacy-safe IDs/logs/latency metrics |
+| 21 | P2 | Documentation/portfolio | Honest source/hosted status, ADRs and actual diagrams; screenshots only after rendered checks |
+
+P4 collaboration, billing, native apps, public APIs and webhooks remain deferred.
+No email/AI integration phase was opened implicitly by accepting this roadmap.
