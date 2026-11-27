@@ -45,10 +45,31 @@ the browser signed out with a warning, but the server session may remain valid
 until revocation or expiry. Independent mode does not initialize or subscribe to
 Supabase Auth; do not mix provider identities.
 
-The login/register limiter is an in-memory, per-instance control. It is not a
-distributed brute-force defense. Before a public serverless deployment, require
-a shared or platform-enforced limiter, verify the trusted client-IP path, and
-test rejection across instances. Never trust arbitrary forwarded IP headers.
+Login and enabled registration share a PostgreSQL budget per normalized account:
+ten attempts per fifteen-minute window, across processes and IP addresses. An
+atomic upsert uses the database clock and does not extend the window on denial.
+Store failures return 503 before credentials are checked; over-budget requests
+return 429 with Retry-After. The new AuthAttempt migration must precede this code.
+Logout and identity checks do not consume these budgets.
+
+The existing in-memory IP cap remains an additional per-instance control. The
+shared account budget does not trust forwarded IP headers. It is not a complete
+abuse defense: an attacker can consume another account's budget, rotate account
+names, or generate database rows. Before public serverless activation, verify
+the trusted client-IP path and configure platform-wide request limits. Never
+trust arbitrary forwarded headers or describe the account budget as DDoS protection.
+
+AuthAttempt stores a SHA-256-derived account key, bounded count and expiration,
+not raw email/password/IP. Derived keys remain personal data and can be guessed
+from known emails; restrict database access, avoid logs and include them in the
+retention policy. The expiry index supports scheduled cleanup of rows whose
+expiresAt is older than one day. Schedule and monitor that cleanup before public
+activation; expiration alone resets budgets but does not delete inactive keys.
+
+
+Identity restoration retains the independent bearer on network, 429 or server
+failures while keeping private UI hidden. Only a definitive 401 clears that token.
+A retained token alone never authorizes a server request.
 
 Recovery, expired-session cleanup and deletion/retention remain operational
 requirements. Do not treat passing unit tests as approval to enable this mode.

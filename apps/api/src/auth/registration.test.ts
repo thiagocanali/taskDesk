@@ -9,7 +9,7 @@ describe("registration policy", () => {
  it.each([undefined,"false","TRUE","1"])("denies registration unless explicitly enabled (%s)",async value => {
   vi.stubEnv("AUTH_ALLOW_REGISTRATION",value);
   const create = vi.fn();
-  const prisma = {authUser:{create}} as unknown as PrismaClient;
+  const prisma = {authUser:{create},$queryRaw:vi.fn().mockResolvedValue([{allowed:true,retryAfter:900}])} as unknown as PrismaClient;
   const app = express().use(express.json()).use(createAuthRouter(prisma));
   const response = await request(app).post("/register").send({email:"user@example.test",password:"long-example-password"});
   expect(response.status).toBe(403);
@@ -31,7 +31,7 @@ describe("registration policy", () => {
  it("allows registration only after the operator opts in",async () => {
   vi.stubEnv("AUTH_ALLOW_REGISTRATION","true");
   const create = vi.fn().mockResolvedValue({id:"u1",email:"user@example.test"});
-  const prisma = {authUser:{create}} as unknown as PrismaClient;
+  const prisma = {authUser:{create},$queryRaw:vi.fn().mockResolvedValue([{allowed:true,retryAfter:900}])} as unknown as PrismaClient;
   const app = express().use(express.json()).use(createAuthRouter(prisma));
   const response = await request(app).post("/register").send({email:"user@example.test",password:"long-example-password"});
   expect(response.status).toBe(201);

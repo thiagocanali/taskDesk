@@ -72,3 +72,12 @@ model AuthSession {
   @@index([userId, expiresAt])
   @@index([expiresAt])
 }
+
+// Shared attempt budgets; keys are derived identifiers, never raw emails.
+model AuthAttempt {
+  key       String   @id @db.VarChar(64)
+  attempts  Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

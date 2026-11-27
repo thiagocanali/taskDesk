@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { PrismaClient } from "@prisma/client";
 import { InvalidCredentials, normalizeEmail, registerUser, signInUser } from "./credentials.js";
 import { revokeSession, verifySession } from "./sessions.js";
+import { accountAttemptKey, consumeAccountAttempt } from "./attempts.js";
 
 const WINDOW_MS=15*60*1000;
 const MAX_ATTEMPTS=10;
@@ -29,6 +30,23 @@ export function createAuthRouter(prisma: PrismaClient, options = {
    return;
   }
   attempts.set(key,{count:(previous && previous.until>now ? previous.count:0)+1,until:previous && previous.until>now?previous.until:now+WINDOW_MS});
+  next();
+ });
+ router.use(async (request,response,next) => {
+  if (request.method !== "POST" || (request.path !== "/login" && request.path !== "/register")) return next();
+  if (request.path === "/register" && !options.allowRegistration) return next();
+  const key = accountAttemptKey(request.body?.email);
+  if (!key) return next(); // Invalid identifiers remain subject to the local request cap.
+  try {
+   const decision = await consumeAccountAttempt(prisma,key);
+   if (!decision.allowed) {
+    response.setHeader("Retry-After",String(decision.retryAfter));
+    response.status(429).json({error:"Muitas tentativas. Tente novamente mais tarde."});return;
+   }
+  } catch {
+   // A missing migration/store outage must never bypass the shared budget.
+   response.status(503).json({error:"O acesso está temporariamente indisponível."});return;
+  }
   next();
  });
  router.post("/register",async(request,response)=>{
