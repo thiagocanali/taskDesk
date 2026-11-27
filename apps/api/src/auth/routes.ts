@@ -2,12 +2,15 @@ import { Router } from "express";
 import type { PrismaClient } from "@prisma/client";
 import { InvalidCredentials, normalizeEmail, registerUser, signInUser } from "./credentials.js";
 import { revokeSession, verifySession } from "./sessions.js";
+import { accountAttemptKey, consumeAccountAttempt } from "./attempts.js";
 
 const WINDOW_MS=15*60*1000;
 const MAX_ATTEMPTS=10;
 const MAX_BUCKETS=10000;
 
-export function createAuthRouter(prisma: PrismaClient) {
+export function createAuthRouter(prisma: PrismaClient, options = {
+ allowRegistration: process.env.AUTH_ALLOW_REGISTRATION === "true",
+}) {
  const router=Router();
  const attempts=new Map<string,{count:number,until:number}>();
  router.use((request,response,next)=>{
@@ -29,7 +32,27 @@ export function createAuthRouter(prisma: PrismaClient) {
   attempts.set(key,{count:(previous && previous.until>now ? previous.count:0)+1,until:previous && previous.until>now?previous.until:now+WINDOW_MS});
   next();
  });
+ router.use(async (request,response,next) => {
+  if (request.method !== "POST" || (request.path !== "/login" && request.path !== "/register")) return next();
+  if (request.path === "/register" && !options.allowRegistration) return next();
+  const key = accountAttemptKey(request.body?.email);
+  if (!key) return next(); // Invalid identifiers remain subject to the local request cap.
+  try {
+   const decision = await consumeAccountAttempt(prisma,key);
+   if (!decision.allowed) {
+    response.setHeader("Retry-After",String(decision.retryAfter));
+    response.status(429).json({error:"Muitas tentativas. Tente novamente mais tarde."});return;
+   }
+  } catch {
+   // A missing migration/store outage must never bypass the shared budget.
+   response.status(503).json({error:"O acesso está temporariamente indisponível."});return;
+  }
+  next();
+ });
  router.post("/register",async(request,response)=>{
+  if (!options.allowRegistration) {
+   response.status(403).json({error:"O cadastro de contas está indisponível."});return;
+  }
   const {email,password}=request.body ?? {};
   if(typeof email!=="string" || typeof password!=="string"){
    response.status(400).json({error:"Dados inválidos."});return;

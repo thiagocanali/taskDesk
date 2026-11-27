@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import type { Session } from "@supabase/supabase-js";
-import { authClient, localMode, neonMode, neonSignIn, neonSignOut, neonRegister, neonRestore, clearNeonSession } from "./auth";
+import { authClient, localMode, neonMode, registrationEnabled, neonSignIn, neonSignOut, neonRegister, neonRestore, clearNeonSession } from "./auth";
 import TaskDashboard from "./TaskDashboard.vue";
 
 const session = ref<Session | null>(null);
@@ -13,8 +13,36 @@ const email = ref("");
 const password = ref("");
 const error = ref("");
 let unsubscribe: (() => void) | undefined;
+const restoreFailed = ref(false);
+let restoring = false;
+let restoreVersion = 0;
+let disposed = false;
+
+async function restoreSession() {
+  if (restoring || disposed) return;
+  restoring = true;
+  const version = ++restoreVersion;
+  loading.value = true;
+  restoreFailed.value = false;
+  try {
+    const user = await neonRestore();
+    if (!disposed && version === restoreVersion) neonUser.value = user;
+  } catch {
+    if (!disposed && version === restoreVersion) restoreFailed.value = true;
+  } finally {
+    restoring = false;
+    if (!disposed && version === restoreVersion) loading.value = false;
+  }
+}
+
+function connectionRestored() {
+  if (restoreFailed.value) void restoreSession();
+}
 
 function sessionExpired() {
+  restoreVersion++;
+  restoreFailed.value = false;
+  loading.value = false;
   session.value = null;
   neonUser.value = null;
   if (neonMode) clearNeonSession();
@@ -22,9 +50,12 @@ function sessionExpired() {
 }
 
 onMounted(() => {
-  if (neonMode) void neonRestore().then(user => {neonUser.value=user;loading.value=false;}).catch(()=>{loading.value=false;});
+  if (neonMode) {
+    void restoreSession();
+    window.addEventListener("online", connectionRestored);
+  }
   window.addEventListener("taskdesk:unauthorized", sessionExpired);
-  if (!authClient) return;
+  if (neonMode || !authClient) return;
   const { data } = authClient.auth.onAuthStateChange((_event, nextSession) => {
     session.value = nextSession;
     loading.value = false;
@@ -32,6 +63,9 @@ onMounted(() => {
   unsubscribe = () => data.subscription.unsubscribe();
 });
 onUnmounted(() => {
+  disposed = true;
+  restoreVersion++;
+  window.removeEventListener("online", connectionRestored);
   unsubscribe?.();
   window.removeEventListener("taskdesk:unauthorized", sessionExpired);
 });
@@ -62,7 +96,11 @@ async function signOut() {
   saving.value = true;
   error.value = "";
   try {
-    if (neonMode) { await neonSignOut(); neonUser.value=null; }
+    if (neonMode) {
+      neonUser.value=null;
+      password.value="";
+      await neonSignOut();
+    }
     else {
       const result = await authClient!.auth.signOut({scope: "local"});
       if (result.error) throw result.error;
@@ -70,7 +108,9 @@ async function signOut() {
     }
     password.value = "";
   } catch {
-    error.value = "Não foi possível sair. Tente novamente.";
+    error.value = neonMode
+      ? "Você saiu deste dispositivo. Não foi possível confirmar o encerramento da sessão no servidor."
+      : "Não foi possível sair. Tente novamente.";
   } finally {
     saving.value = false;
   }
@@ -91,6 +131,10 @@ async function signOut() {
       <p class="eyebrow">SEU ESPAÇO DE TRABALHO</p>
       <h1 id="auth-title">taskDesk</h1>
       <p v-if="loading" role="status">Verificando sua sessão...</p>
+      <template v-else-if="restoreFailed">
+        <p class="feedback feedback-error" role="alert">Não foi possível verificar sua sessão. Seus dados de acesso foram preservados. Tente novamente quando a conexão estiver disponível.</p>
+        <button class="primary-button" type="button" data-testid="retry-session" @click="restoreSession">Tentar novamente</button>
+      </template>
       <template v-else-if="!authClient && !neonMode">
         <h2>Acesso indisponível</h2>
         <p>Estamos preparando seu espaço. Tente novamente mais tarde.</p>
@@ -103,7 +147,8 @@ async function signOut() {
         <label class="field-label" for="login-password">Senha</label>
         <input id="login-password" v-model="password" type="password" autocomplete="current-password" required :disabled="saving" />
         <button class="primary-button" type="submit" :disabled="saving">{{ saving ? "Aguarde..." : registering ? "Cadastrar e entrar" : "Entrar" }}
-        <button v-if="neonMode" class="secondary-button" type="button" :disabled="saving" @click="registering = !registering">{{ registering ? "Já tenho conta" : "Criar conta" }}</button></button>
+        </button>
+        <button v-if="registrationEnabled" class="secondary-button" type="button" :disabled="saving" @click="registering = !registering">{{ registering ? "Já tenho conta" : "Criar conta" }}</button>
       </form>
     </section>
   </main>

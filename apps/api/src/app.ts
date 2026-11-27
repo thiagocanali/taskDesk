@@ -6,7 +6,10 @@ import { createTasksRouter } from "./tasks/tasks.routes.js";
 import { createAuthRouter } from "./auth/routes.js";
 import type { TaskRepository } from "./tasks/task.types.js";
 
+import { requestObservability, type RequestLogger } from "./observability.js";
+
 export interface AppOptions {
+  requestLogger?: RequestLogger;
   taskRepository?: TaskRepository;
   repositoryForUser?: (userId: string) => TaskRepository;
   authenticate?: Authenticate;
@@ -21,6 +24,7 @@ export function createApp(options: AppOptions = {}) {
     options.taskRepository ?? new PrismaTaskRepository(prisma ??= createPrismaClient(), userId));
 
   app.disable("x-powered-by");
+  app.use(requestObservability(options.requestLogger));
   app.use((_request, response, next) => {
     response.setHeader("X-Content-Type-Options", "nosniff");
     response.setHeader("Cache-Control", "no-store");

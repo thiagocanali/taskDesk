@@ -2,9 +2,9 @@
 
 ## Authentication and authorization
 
-- Supabase Auth email/password accounts are provisioned by the project operator.
-  No self-service signup, mailbox OAuth or email sending is implemented.
-- API requests require a Bearer token verified against Supabase Auth getUser.
+- In Supabase mode, email/password accounts are provisioned by the project operator.
+  No mailbox OAuth or email sending is implemented.
+- In Supabase mode, API requests require a Bearer token verified against Supabase Auth getUser.
   Missing/invalid tokens return 401; missing provider configuration or provider
   outages fail closed with 503. Health remains public. Anonymous Supabase accounts
   are rejected. No authorization decision uses user_metadata.
@@ -18,6 +18,63 @@
   only publishable keys, never database credentials or service_role/secret keys.
 
 ## Browser session
+
+### Independent authentication (`AUTH_MODE=neon`)
+
+This is application-managed authentication, not Neon Auth. It needs the
+AuthUser/AuthSession migrations on a dedicated PostgreSQL database. Selecting
+this mode does not migrate existing Supabase accounts or task ownership.
+
+HTTP registration is disabled unless the server has
+`AUTH_ALLOW_REGISTRATION=true`. The browser only offers registration when
+`VITE_AUTH_ALLOW_REGISTRATION=true`; the server flag is the security boundary.
+Enabling registration requires an operator decision. When enabled, duplicate
+emails still return 409 and email ownership is not verified. No password reset
+or email verification workflow is provided.
+
+Passwords use salted scrypt hashes. Login performs password verification even
+for an unknown account; this reduces an obvious work difference but does not
+guarantee constant response timing or prevent all account enumeration. Session
+tokens are random, stored only as SHA-256 hashes server-side, and rejected after
+seven days or explicit revocation. Revocation takes effect on the next check.
+
+Independent logout clears the tab's token and private dashboard before awaiting
+the revocation request. The old bearer is captured only for that request. Auth
+HTTP requests have an eight-second timeout by default. A failed revocation leaves
+the browser signed out with a warning, but the server session may remain valid
+until revocation or expiry. Independent mode does not initialize or subscribe to
+Supabase Auth; do not mix provider identities.
+
+Login and enabled registration share a PostgreSQL budget per normalized account:
+ten attempts per fifteen-minute window, across processes and IP addresses. An
+atomic upsert uses the database clock and does not extend the window on denial.
+Store failures return 503 before credentials are checked; over-budget requests
+return 429 with Retry-After. The new AuthAttempt migration must precede this code.
+Logout and identity checks do not consume these budgets.
+
+The existing in-memory IP cap remains an additional per-instance control. The
+shared account budget does not trust forwarded IP headers. It is not a complete
+abuse defense: an attacker can consume another account's budget, rotate account
+names, or generate database rows. Before public serverless activation, verify
+the trusted client-IP path and configure platform-wide request limits. Never
+trust arbitrary forwarded headers or describe the account budget as DDoS protection.
+
+AuthAttempt stores a SHA-256-derived account key, bounded count and expiration,
+not raw email/password/IP. Derived keys remain personal data and can be guessed
+from known emails; restrict database access, avoid logs and include them in the
+retention policy. The expiry index supports scheduled cleanup of rows whose
+expiresAt is older than one day. Schedule and monitor that cleanup before public
+activation; expiration alone resets budgets but does not delete inactive keys.
+
+
+Identity restoration retains the independent bearer on network, 429 or server
+failures while keeping private UI hidden. Only a definitive 401 clears that token.
+A retained token alone never authorizes a server request.
+
+Recovery, expired-session cleanup and deletion/retention remain operational
+requirements. Do not treat passing unit tests as approval to enable this mode.
+
+### Supabase authentication
 
 Sessions use sessionStorage, bounded to the current tab. Dashboard state is
 unmounted on logout, user changes or API 401 responses. getSession is used only
