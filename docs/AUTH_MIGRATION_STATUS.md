@@ -84,3 +84,26 @@ postponed; reverting to pre-hardening code would reopen default registration.
 No hosted rollback operation is needed for a local-only batch. Do not delete
 accounts, reassign tasks, pause projects, apply hosted migrations or change
 production providers as an implicit continuation of this review.
+
+## Session restoration follow-up (2026-11-26, local only)
+
+Prepared against PR #24 head 27d048c. A local snapshot's Git tree was verified
+identical to that head before editing; unrelated work in another checkout was
+preserved. This follow-up has not been pushed, merged or deployed.
+
+Restoration clears the captured token only after /me confirms HTTP 401. Network
+errors, timeouts, throttling and other HTTP failures preserve it and show a
+retry state instead of the login form. The private dashboard remains hidden
+until identity confirmation succeeds. Users can retry explicitly; the browser's
+online event also retries after a failed restoration. Concurrent retries are
+deduplicated and stale responses cannot restore private views after invalidation
+or remove a replacement token.
+
+Regression tests reproduced ten failures before the fix. Local validation used
+existing dependencies without installing or changing them: 33 Vue tests and 42
+API tests passed; 11 database integration tests were skipped because no disposable
+PostgreSQL was configured. Frontend typecheck and production build passed.
+The API and database schema were not changed. The existing GitHub Actions check
+on 27d048c passed, but does not validate this unpublished follow-up. A new CI run
+must follow authorized publication to PR #24 before this batch is considered
+fully validated. Production settings and hosted databases remain untouched.

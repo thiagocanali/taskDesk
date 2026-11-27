@@ -41,4 +41,43 @@ describe("Neon browser auth",()=>{
   expect(neonToken()).toBeNull();
  });
 
+
+ it.each([429, 500, 503, 403])("preserves the token when restoration returns HTTP %s",async status=>{
+  const token="c".repeat(64);
+  window.sessionStorage.setItem("taskdesk:neon-token",token);
+  vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response("temporary failure",{status}));
+  await expect(neonRestore()).rejects.toThrow();
+  expect(neonToken()).toBe(token);
+ });
+ it.each([new TypeError("network failure"),new DOMException("timeout","TimeoutError")])("preserves the token after a transport failure and restores it on retry",async failure=>{
+  const token="c".repeat(64);
+  window.sessionStorage.setItem("taskdesk:neon-token",token);
+  const fetchMock=vi.spyOn(globalThis,"fetch").mockRejectedValueOnce(failure)
+   .mockResolvedValueOnce(new Response(JSON.stringify({data:{id:"u1",email:"user@example.test"}})));
+  await expect(neonRestore()).rejects.toThrow();
+  expect(neonToken()).toBe(token);
+  expect(await neonRestore()).toEqual({id:"u1",email:"user@example.test"});
+  expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({Authorization:"Bearer "+token});
+  expect(neonToken()).toBe(token);
+ });
+ it("keeps the token while identity confirmation is pending",async()=>{
+  const token="d".repeat(64);
+  window.sessionStorage.setItem("taskdesk:neon-token",token);
+  let resolve!: (response:Response)=>void;
+  vi.spyOn(globalThis,"fetch").mockImplementation(()=>new Promise(done=>{resolve=done;}));
+  const operation=neonRestore();
+  expect(neonToken()).toBe(token);
+  resolve(new Response(JSON.stringify({data:{id:"u1",email:"user@example.test"}})));
+  expect(await operation).toMatchObject({id:"u1"});
+ });
+ it("does not delete a replacement token after an old request returns 401",async()=>{
+  window.sessionStorage.setItem("taskdesk:neon-token","old-token");
+  let resolve!: (response:Response)=>void;
+  vi.spyOn(globalThis,"fetch").mockImplementation(()=>new Promise(done=>{resolve=done;}));
+  const operation=neonRestore();
+  window.sessionStorage.setItem("taskdesk:neon-token","replacement-token");
+  resolve(new Response(null,{status:401}));
+  expect(await operation).toBeNull();
+  expect(neonToken()).toBe("replacement-token");
+ });
 });

@@ -41,4 +41,53 @@ describe("independent account logout", () => {
   expect(wrapper.get('button[type="submit"]').attributes("disabled")).toBeUndefined();
   wrapper.unmount();
  });
+
+ it.each(["button","online"])("keeps private views hidden after a failed restore and recovers via %s",async trigger=>{
+  mocks.restore.mockRejectedValueOnce(new Error("sensitive network details"))
+   .mockResolvedValueOnce({id:"user-1",email:"user@example.test"});
+  const wrapper=mount(App); await flushPromises();
+  expect(wrapper.find('[data-testid="private-dashboard"]').exists()).toBe(false);
+  expect(wrapper.find("form").exists()).toBe(false);
+  expect(wrapper.text()).toContain("Não foi possível verificar sua sessão.");
+  expect(wrapper.text()).not.toContain("sensitive network details");
+  if(trigger==="online") window.dispatchEvent(new Event("online"));
+  else await wrapper.get('[data-testid="retry-session"]').trigger("click");
+  await flushPromises();
+  expect(mocks.restore).toHaveBeenCalledTimes(2);
+  expect(wrapper.find('[data-testid="private-dashboard"]').exists()).toBe(true);
+  wrapper.unmount();
+ });
+ it("shows login only when restoration confirms no valid session",async()=>{
+  mocks.restore.mockResolvedValueOnce(null);
+  const wrapper=mount(App); await flushPromises();
+  expect(wrapper.find("form").exists()).toBe(true);
+  expect(wrapper.find('[data-testid="private-dashboard"]').exists()).toBe(false);
+  wrapper.unmount();
+ });
+ it("does not restore private views from a stale response after invalidation",async()=>{
+  let resolve!: (value:{id:string;email:string})=>void;
+  mocks.restore.mockImplementationOnce(()=>new Promise(done=>{resolve=done;}));
+  const wrapper=mount(App);
+  window.dispatchEvent(new Event("taskdesk:unauthorized"));
+  resolve({id:"user-1",email:"user@example.test"}); await flushPromises();
+  expect(wrapper.find('[data-testid="private-dashboard"]').exists()).toBe(false);
+  expect(wrapper.find("form").exists()).toBe(true);
+  wrapper.unmount();
+ });
+
+ it("deduplicates reconnect attempts and removes the reconnect listener on unmount",async()=>{
+  let resolve!: (value:{id:string;email:string})=>void;
+  mocks.restore.mockRejectedValueOnce(new Error("offline"))
+   .mockImplementationOnce(()=>new Promise(done=>{resolve=done;}));
+  const wrapper=mount(App); await flushPromises();
+  window.dispatchEvent(new Event("online"));
+  window.dispatchEvent(new Event("online")); await flushPromises();
+  expect(mocks.restore).toHaveBeenCalledTimes(2);
+  expect(wrapper.text()).toContain("Verificando sua sessão...");
+  expect(wrapper.find('[data-testid="private-dashboard"]').exists()).toBe(false);
+  wrapper.unmount();
+  window.dispatchEvent(new Event("online"));
+  expect(mocks.restore).toHaveBeenCalledTimes(2);
+  resolve({id:"user-1",email:"user@example.test"}); await flushPromises();
+ });
 });

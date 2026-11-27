@@ -13,8 +13,36 @@ const email = ref("");
 const password = ref("");
 const error = ref("");
 let unsubscribe: (() => void) | undefined;
+const restoreFailed = ref(false);
+let restoring = false;
+let restoreVersion = 0;
+let disposed = false;
+
+async function restoreSession() {
+  if (restoring || disposed) return;
+  restoring = true;
+  const version = ++restoreVersion;
+  loading.value = true;
+  restoreFailed.value = false;
+  try {
+    const user = await neonRestore();
+    if (!disposed && version === restoreVersion) neonUser.value = user;
+  } catch {
+    if (!disposed && version === restoreVersion) restoreFailed.value = true;
+  } finally {
+    restoring = false;
+    if (!disposed && version === restoreVersion) loading.value = false;
+  }
+}
+
+function connectionRestored() {
+  if (restoreFailed.value) void restoreSession();
+}
 
 function sessionExpired() {
+  restoreVersion++;
+  restoreFailed.value = false;
+  loading.value = false;
   session.value = null;
   neonUser.value = null;
   if (neonMode) clearNeonSession();
@@ -22,7 +50,10 @@ function sessionExpired() {
 }
 
 onMounted(() => {
-  if (neonMode) void neonRestore().then(user => {neonUser.value=user;loading.value=false;}).catch(()=>{loading.value=false;});
+  if (neonMode) {
+    void restoreSession();
+    window.addEventListener("online", connectionRestored);
+  }
   window.addEventListener("taskdesk:unauthorized", sessionExpired);
   if (neonMode || !authClient) return;
   const { data } = authClient.auth.onAuthStateChange((_event, nextSession) => {
@@ -32,6 +63,9 @@ onMounted(() => {
   unsubscribe = () => data.subscription.unsubscribe();
 });
 onUnmounted(() => {
+  disposed = true;
+  restoreVersion++;
+  window.removeEventListener("online", connectionRestored);
   unsubscribe?.();
   window.removeEventListener("taskdesk:unauthorized", sessionExpired);
 });
@@ -97,6 +131,10 @@ async function signOut() {
       <p class="eyebrow">SEU ESPAÇO DE TRABALHO</p>
       <h1 id="auth-title">taskDesk</h1>
       <p v-if="loading" role="status">Verificando sua sessão...</p>
+      <template v-else-if="restoreFailed">
+        <p class="feedback feedback-error" role="alert">Não foi possível verificar sua sessão. Seus dados de acesso foram preservados. Tente novamente quando a conexão estiver disponível.</p>
+        <button class="primary-button" type="button" data-testid="retry-session" @click="restoreSession">Tentar novamente</button>
+      </template>
       <template v-else-if="!authClient && !neonMode">
         <h2>Acesso indisponível</h2>
         <p>Estamos preparando seu espaço. Tente novamente mais tarde.</p>
