@@ -17,6 +17,34 @@ Do not expose a second unauthenticated API deployment.
 
 ## Hosted configuration
 
+The configuration below describes Supabase mode. The alternative application
+authentication mode requires `AUTH_MODE=neon` on the server and
+`VITE_AUTH_MODE=neon` at client build time, plus DATABASE_URL and all committed
+migrations. It is not Neon Auth, and a database provider must be chosen explicitly.
+Do not switch modes on a live application without an identity/ownership plan.
+
+Independent HTTP registration is closed by default. Only set
+`AUTH_ALLOW_REGISTRATION=true` (server) and
+`VITE_AUTH_ALLOW_REGISTRATION=true` (client build) after reviewing the signup
+policy. The client flag does not grant permission on its own. Public activation
+also requires platform-wide request limits and the checks in SECURITY.md. Account
+attempt budgets now use PostgreSQL: apply the additive AuthAttempt migration
+before releasing this code. Without the table, login fails closed with 503. Use a
+trusted server role able to access the RLS-protected AuthAttempt table, and schedule
+cleanup of rows expired for over one day. Never run migrations from HTTP handlers.
+
+Migration rollback: retain the additive AuthAttempt table if reverting the app;
+do not drop it while any new server instance is running. An older app release has
+only local limiting, so restrict public traffic before reverting. No existing
+user, session or task is modified by this migration. Verify shared-budget
+concurrency and expired-window tests in an isolated database before approval.
+
+For rollback of this change, keep both registration flags unset or false and
+retain the hardened server release. Do not revert to a release with public
+registration enabled by default. Disabling registration does not delete accounts
+or revoke existing sessions. This change requires no database migration and does
+not change the selected production authentication mode.
+
 Choose a dedicated Supabase project before activation. Never reuse an unrelated
 application database. New resources may incur cost; do not provision a paid
 project without the user's approval.
